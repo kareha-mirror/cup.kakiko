@@ -26,6 +26,7 @@ func Cooked() {
 		panic("invalid state")
 	}
 	term.Restore(int(os.Stdin.Fd()), state)
+	state = nil
 }
 
 func Clear() {
@@ -74,4 +75,8 @@ func LoadCursor() {
 
 func ScrollRange(top, bottom int) {
 	fmt.Printf("\x1b[%d;%dr", top+1, bottom)
+}
+
+func ClearLine() {
+	fmt.Print("\x1b[K")
 }
