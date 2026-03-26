@@ -11,7 +11,7 @@ import (
 	"tea.kareha.org/lab/termi"
 )
 
-type Process func(b []byte) []byte
+type Process func(key termi.Key) string
 type Status func() string
 
 const defaultCommand = "/bin/sh"
@@ -32,6 +32,20 @@ func (f *FEP) updateSize() {
 		Rows: uint16(rows - 1),
 		Cols: uint16(cols),
 	})
+}
+
+func writeStringAll(fd *os.File, s string) error {
+	data := []byte(s)
+	total := 0
+
+	for total < len(data) {
+		n, err := fd.Write(data[total:])
+		if err != nil {
+			return err
+		}
+		total += n
+	}
+	return nil
 }
 
 func Init(args []string, process Process, status Status) *FEP {
@@ -73,18 +87,9 @@ func Init(args []string, process Process, status Status) *FEP {
 
 	go func() {
 		for {
-			b := make([]byte, 1)
-			n, err := os.Stdin.Read(b)
-			if err != nil {
-				return
-			}
-			if n == 0 {
-				continue
-			}
-
-			processed := f.process(b)
-
-			_, err = fd.Write(processed)
+			key := termi.ReadKey()
+			processed := f.process(key)
+			err = writeStringAll(fd, processed)
 			if err != nil {
 				return
 			}

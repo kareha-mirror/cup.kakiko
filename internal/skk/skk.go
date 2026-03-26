@@ -2,14 +2,21 @@ package skk
 
 import (
 	"fmt"
+
+	"tea.kareha.org/lab/termi"
 )
 
 // XXX dummy
 var count int = 0
 
-func Process(b []byte) []byte {
+func Process(key termi.Key) string {
 	count++ // XXX dummy
-	return b
+	switch key.Kind {
+	case termi.KeyRune:
+		return string(key.Rune)
+	default:
+		return key.Raw
+	}
 }
 
 func Status() string {
