@@ -8,7 +8,7 @@ import (
 
 	"github.com/creack/pty"
 
-	"tea.kareha.org/lab/kakiko/internal/console"
+	"tea.kareha.org/lab/termi"
 )
 
 type Process func(b []byte) []byte
@@ -64,12 +64,12 @@ func Init(args []string, process Process, status Status) *FEP {
 		}
 	}()
 
-	_, h := console.Size()
-	console.ScrollRange(0, h-1)
+	_, h := termi.Size()
+	termi.ScrollRange(0, h-1)
 
-	console.Clear()
-	console.HomeCursor()
-	console.Raw()
+	termi.Clear()
+	termi.HomeCursor()
+	termi.Raw()
 
 	go func() {
 		for {
@@ -100,27 +100,27 @@ func Init(args []string, process Process, status Status) *FEP {
 }
 
 func (f *FEP) Finish() {
-	_, h := console.Size()
-	console.ScrollRange(0, h)
+	_, h := termi.Size()
+	termi.ScrollRange(0, h)
 
-	console.Clear()
-	console.HomeCursor()
-	console.Cooked()
-	console.ShowCursor()
+	termi.Clear()
+	termi.HomeCursor()
+	termi.Cooked()
+	termi.ShowCursor()
 }
 
 func (f *FEP) drawStatus() {
-	_, h := console.Size()
-	console.SaveCursor()
-	console.HideCursor()
-	console.MoveCursor(0, h-1)
+	_, h := termi.Size()
+	termi.SaveCursor()
+	termi.HideCursor()
+	termi.MoveCursor(0, h-1)
 
 	status := f.status()
-	console.Print(status)
-	console.ClearLine()
+	termi.Print(status)
+	termi.ClearTail()
 
-	console.ShowCursor()
-	console.LoadCursor()
+	termi.ShowCursor()
+	termi.LoadCursor()
 }
 
 func (f *FEP) Main() {
