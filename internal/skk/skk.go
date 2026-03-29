@@ -3,7 +3,7 @@ package skk
 import (
 	"fmt"
 
-	"tea.kareha.org/lab/termi"
+	"tea.kareha.org/cup/termi"
 )
 
 // XXX dummy

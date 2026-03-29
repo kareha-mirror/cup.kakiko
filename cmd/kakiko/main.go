@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"tea.kareha.org/lab/kakiko/internal/fep"
-	"tea.kareha.org/lab/kakiko/internal/skk"
+	"tea.kareha.org/cup/kakiko/internal/fep"
+	"tea.kareha.org/cup/kakiko/internal/skk"
 )
 
 func main() {

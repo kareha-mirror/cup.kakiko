@@ -8,7 +8,7 @@ import (
 
 	"github.com/creack/pty"
 
-	"tea.kareha.org/lab/termi"
+	"tea.kareha.org/cup/termi"
 )
 
 type Process func(key termi.Key) string
