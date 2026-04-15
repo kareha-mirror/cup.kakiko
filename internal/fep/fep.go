@@ -105,8 +105,7 @@ func Init(args []string, process Process, status Status) *FEP {
 }
 
 func (f *FEP) Finish() {
-	_, h := termi.Size()
-	termi.ScrollRange(0, h)
+	termi.ScrollReset()
 
 	termi.Clear()
 	termi.HomeCursor()

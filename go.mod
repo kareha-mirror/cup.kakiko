@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/creack/pty v1.1.24
-	tea.kareha.org/cup/termi v0.0.0-20260329004923-d87a5f85904d
+	tea.kareha.org/cup/termi v0.0.0-20260415104513-a2caf7720bb0
 )
 
 require (
