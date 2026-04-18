@@ -89,9 +89,13 @@ func Init(args []string, process Process, status Status) *FEP {
 		for {
 			key := termi.ReadKey()
 			processed := f.process(key)
-			err = writeStringAll(fd, processed)
-			if err != nil {
-				return
+			if processed == "" {
+				f.drawStatus()
+			} else {
+				err = writeStringAll(fd, processed)
+				if err != nil {
+					return
+				}
 			}
 		}
 	}()
