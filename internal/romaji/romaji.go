@@ -514,7 +514,7 @@ var IsN = map[string]bool{
 	"nj": true,
 }
 
-var ToAlphabet = map[string]string{ // wide alphabet
+var HankakuToZenkaku = map[string]string{ // wide alphabet
 	// lower letters
 	"a": "ａ",
 	"b": "ｂ",
