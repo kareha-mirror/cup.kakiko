@@ -21,6 +21,7 @@ type FEP struct {
 	fd      *os.File
 	process Process
 	status  Status
+	esc     bool
 }
 
 func (f *FEP) updateSize() {
@@ -105,6 +106,11 @@ func Init(args []string, process Process, status Status) *FEP {
 		os.Exit(0)
 	}()
 
+	termi.AddEscapeListener(func(esc bool) {
+		f.esc = esc
+		f.drawStatus()
+	})
+
 	return f
 }
 
@@ -118,7 +124,7 @@ func (f *FEP) Finish() {
 }
 
 func (f *FEP) drawStatus() {
-	_, h := termi.Size()
+	w, h := termi.Size()
 	termi.SaveCursor()
 	termi.HideCursor()
 	termi.MoveCursor(0, h-1)
@@ -126,6 +132,13 @@ func (f *FEP) drawStatus() {
 	status := f.status()
 	termi.Print(status)
 	termi.ClearTail()
+
+	termi.MoveCursor(w-2, h-1)
+	if f.esc {
+		termi.Print(" *")
+	} else {
+		termi.Print(" .")
+	}
 
 	termi.ShowCursor()
 	termi.LoadCursor()
