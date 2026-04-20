@@ -18,10 +18,11 @@ const defaultCommand = "/bin/sh"
 const bufferSize = 1024
 
 type FEP struct {
-	fd      *os.File
-	process Process
-	status  Status
-	esc     bool
+	fd       *os.File
+	process  Process
+	status   Status
+	listener termi.EscapeListener
+	esc      bool
 }
 
 func (f *FEP) updateSize() {
@@ -65,9 +66,11 @@ func Init(args []string, process Process, status Status) *FEP {
 	}
 
 	f := &FEP{
-		fd:      fd,
-		process: process,
-		status:  status,
+		fd:       fd,
+		process:  process,
+		status:   status,
+		listener: nil,
+		esc:      false,
 	}
 
 	f.updateSize()
@@ -106,15 +109,19 @@ func Init(args []string, process Process, status Status) *FEP {
 		os.Exit(0)
 	}()
 
-	termi.AddEscapeListener(func(esc bool) {
+	listener := func(esc bool) {
 		f.esc = esc
 		f.drawStatus()
-	})
+	}
+	f.listener = termi.EscapeListener(&listener)
+	termi.AddEscapeListener(f.listener)
 
 	return f
 }
 
 func (f *FEP) Finish() {
+	termi.RemoveEscapeListener(f.listener)
+
 	termi.ScrollReset()
 
 	termi.Clear()

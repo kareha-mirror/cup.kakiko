@@ -145,6 +145,20 @@ func Process(key termi.Key) string {
 			return output.String()
 		}
 
+		if r == termi.RuneEscape {
+			romajiMode = RomajiDirect
+			kanaBuilder.Reset()
+
+			if convMode != ConvNone {
+				flush()
+				resetConv()
+			}
+
+			output.WriteRune(r)
+
+			return output.String()
+		}
+
 		if r < ' ' {
 			output.WriteRune(r)
 			return output.String()
@@ -286,20 +300,6 @@ func Process(key termi.Key) string {
 				flush()
 				resetConv()
 			}
-
-			return output.String()
-		}
-
-		if r == termi.RuneEscape {
-			romajiMode = RomajiDirect
-			kanaBuilder.Reset()
-
-			if convMode != ConvNone {
-				flush()
-				resetConv()
-			}
-
-			output.WriteRune(r)
 
 			return output.String()
 		}
