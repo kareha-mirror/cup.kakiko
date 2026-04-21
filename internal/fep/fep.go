@@ -11,7 +11,7 @@ import (
 	"tea.kareha.org/cup/termi"
 )
 
-type Process func(key termi.Key) string
+type Process func(key termi.Key) (string, bool)
 type Status func() string
 
 const defaultCommand = "/bin/sh"
@@ -89,17 +89,20 @@ func Init(args []string, process Process, status Status) *FEP {
 	termi.HomeCursor()
 	termi.Raw()
 
+	f.drawStatus()
+
 	go func() {
 		for {
 			key := termi.ReadKey()
-			processed := f.process(key)
-			if processed == "" {
-				f.drawStatus()
-			} else {
+			processed, update := f.process(key)
+			if processed != "" {
 				err = writeStringAll(fd, processed)
 				if err != nil {
 					return
 				}
+			}
+			if update {
+				f.drawStatus()
 			}
 		}
 	}()
@@ -160,7 +163,5 @@ func (f *FEP) Main() {
 		}
 
 		os.Stdout.Write(buf[:n])
-
-		f.drawStatus()
 	}
 }

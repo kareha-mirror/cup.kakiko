@@ -57,16 +57,16 @@ func resetConv() {
 	convOkuri.Reset()
 }
 
-func Process(key termi.Key) string {
+func Process(key termi.Key) (string, bool) {
 	switch key.Kind {
 	case termi.KeyRune:
 		r := key.Rune
 
 		if r == termi.RuneBackspace || r == termi.RuneDelete {
 			if kanaBuilder.RemoveTail() {
-				return ""
+				return "", true
 			} else if convOkuri.RemoveTail() {
-				return ""
+				return "", true
 			} else if convMode != ConvNone && convBuilder.RemoveTail() {
 				if convBuilder.Len() < 1 {
 					convMode = ConvNone
@@ -75,9 +75,9 @@ func Process(key termi.Key) string {
 				convList = []string{}
 				convIndex = 0
 				convCand = ""
-				return ""
+				return "", true
 			} else {
-				return string(r)
+				return string(r), false
 			}
 		}
 
@@ -104,7 +104,7 @@ func Process(key termi.Key) string {
 
 			resetConv()
 
-			return output.String()
+			return output.String(), true
 		}
 
 		if romajiMode == RomajiAlphabet {
@@ -112,12 +112,12 @@ func Process(key termi.Key) string {
 			if ok {
 				output.WriteString(alphabet)
 			}
-			return output.String()
+			return output.String(), false
 		}
 
 		if romajiMode == RomajiDirect {
 			output.WriteRune(r)
-			return output.String()
+			return output.String(), false
 		}
 
 		// now in Hiragana or Katakana mode
@@ -131,18 +131,18 @@ func Process(key termi.Key) string {
 				resetConv()
 			}
 
-			return output.String()
+			return output.String(), true
 		}
 
 		if r == termi.RuneEnter && convMode != ConvNone {
 			flush()
 			resetConv()
-			return output.String()
+			return output.String(), true
 		}
 
 		if r == termi.RuneEnter {
 			output.WriteRune(r)
-			return output.String()
+			return output.String(), false
 		}
 
 		if r == termi.RuneEscape {
@@ -155,13 +155,12 @@ func Process(key termi.Key) string {
 			}
 
 			output.WriteRune(r)
-
-			return output.String()
+			return output.String(), true
 		}
 
 		if r < ' ' {
 			output.WriteRune(r)
-			return output.String()
+			return output.String(), false
 		}
 
 		if r == ' ' && convMode != ConvNone {
@@ -181,7 +180,7 @@ func Process(key termi.Key) string {
 				} else {
 					if len(convList) < 1 {
 						message = "SKK: 候補なし"
-						return output.String()
+						return output.String(), true
 					}
 					hasConvList = true
 				}
@@ -200,7 +199,7 @@ func Process(key termi.Key) string {
 			} else {
 				convCand = ""
 			}
-			return output.String()
+			return output.String(), true
 		}
 
 		if r == 'x' && hasConvList {
@@ -220,7 +219,7 @@ func Process(key termi.Key) string {
 					}
 				}
 			}
-			return output.String()
+			return output.String(), true
 		}
 
 		if r == '/' {
@@ -229,7 +228,7 @@ func Process(key termi.Key) string {
 				resetConv()
 			}
 			convMode = ConvEnglish
-			return output.String()
+			return output.String(), true
 		}
 
 		if convMode == ConvEnglish {
@@ -238,7 +237,7 @@ func Process(key termi.Key) string {
 				resetConv()
 			} else {
 				convBuilder.WriteRune(r)
-				return output.String()
+				return output.String(), true
 			}
 		}
 
@@ -273,23 +272,26 @@ func Process(key termi.Key) string {
 			if convMode != ConvNone && kigou == "ー" {
 				if !hasConvList {
 					convBuilder.WriteString(kigou)
-					return output.String()
+					return output.String(), true
 				}
 			}
 
+			update := kanaBuilder.Len() > 0
 			kanaBuilder.Reset()
 			output.WriteString(kigou)
-			return output.String()
+			return output.String(), update
 		}
 
 		if r < 'a' && r > 'z' {
+			update := false
 			if convMode != ConvNone {
 				flush()
 				resetConv()
+				update = true
 			}
 
 			output.WriteRune(r)
-			return output.String()
+			return output.String(), update
 		}
 
 		if r == 'l' {
@@ -301,7 +303,7 @@ func Process(key termi.Key) string {
 				resetConv()
 			}
 
-			return output.String()
+			return output.String(), true
 		}
 
 		if r == 'q' {
@@ -313,7 +315,7 @@ func Process(key termi.Key) string {
 				} else {
 					panic("q: invalid romajiMode == " + string(romajiMode))
 				}
-				return output.String()
+				return output.String(), true
 			} else if convMode == ConvStart {
 				if romajiMode == RomajiHiragana {
 					kata := romaji.HiraToKata(convBuilder.String())
@@ -331,7 +333,7 @@ func Process(key termi.Key) string {
 					panic("q (conv): invalid romajiMode == " +
 						string(romajiMode))
 				}
-				return output.String()
+				return output.String(), true
 			}
 		}
 
@@ -384,7 +386,7 @@ func Process(key termi.Key) string {
 			if kana != "" {
 				output.WriteString(kana)
 			}
-			return output.String()
+			return output.String(), true
 		} else if convMode == ConvStart {
 			if kana != "" {
 				convBuilder.WriteString(kana)
@@ -393,7 +395,7 @@ func Process(key termi.Key) string {
 				convIndex = 0
 				convCand = ""
 			}
-			return output.String()
+			return output.String(), true
 		} else if convMode == ConvOkuri {
 			vowel, ok := vowels[kana]
 			if ok {
@@ -426,13 +428,13 @@ func Process(key termi.Key) string {
 				}
 			}
 
-			return output.String()
+			return output.String(), true
 		} else {
 			panic("Process: invalid convMode == " + string(convMode))
-			return output.String()
+			return output.String(), false
 		}
 	default:
-		return key.Raw
+		return key.Raw, false
 	}
 }
 
