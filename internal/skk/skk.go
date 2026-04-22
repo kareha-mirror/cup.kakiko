@@ -37,6 +37,10 @@ var convIndex = 0
 var convCand = ""
 var convOkuri = new(termi.StringBuilder)
 
+var lineMode = false
+var lineBuffer = new(termi.StringBuilder)
+var linePass = false
+
 var message = ""
 
 var vowels = map[string]string{
@@ -63,7 +67,9 @@ func Process(key termi.Key) (string, bool) {
 		r := key.Rune
 
 		if r == termi.RuneBackspace || r == termi.RuneDelete {
-			if kanaBuilder.RemoveTail() {
+			if lineMode && lineBuffer.RemoveTail() {
+				return "", true
+			} else if kanaBuilder.RemoveTail() {
 				return "", true
 			} else if convOkuri.RemoveTail() {
 				return "", true
@@ -90,7 +96,11 @@ func Process(key termi.Key) (string, bool) {
 			} else {
 				out = convBuilder.String() + convOkuri.String()
 			}
-			output.WriteString(out)
+			if lineMode {
+				lineBuffer.WriteString(out)
+			} else {
+				output.WriteString(out)
+			}
 		}
 
 		// Ctrl-J
@@ -107,17 +117,64 @@ func Process(key termi.Key) (string, bool) {
 			return output.String(), true
 		}
 
+		// Ctrl-L
+		if r == '\f' {
+			if linePass {
+				linePass = false
+				output.WriteRune(r)
+				return output.String(), false
+			}
+			linePass = true
+
+			if lineMode {
+				lineMode = false
+				flush()
+				output.WriteString(lineBuffer.String())
+				lineBuffer.Reset()
+			} else {
+				lineMode = true
+			}
+
+			return output.String(), true
+		}
+		linePass = false
+
 		if romajiMode == RomajiAlphabet {
 			alphabet, ok := romaji.HankakuToZenkaku[string(r)]
 			if ok {
-				output.WriteString(alphabet)
+				if lineMode {
+					lineBuffer.WriteString(alphabet)
+					return output.String(), true
+				} else {
+					output.WriteString(alphabet)
+				}
 			}
 			return output.String(), false
 		}
 
+		if r == termi.RuneEnter && convMode == ConvNone {
+			if lineMode {
+				if lineBuffer.Len() > 0 {
+					output.WriteString(lineBuffer.String())
+					lineBuffer.Reset()
+				} else {
+					output.WriteRune(r)
+				}
+				return output.String(), true
+			} else {
+				output.WriteRune(r)
+				return output.String(), false
+			}
+		}
+
 		if romajiMode == RomajiDirect {
-			output.WriteRune(r)
-			return output.String(), false
+			if lineMode {
+				lineBuffer.WriteRune(r)
+				return output.String(), true
+			} else {
+				output.WriteRune(r)
+				return output.String(), false
+			}
 		}
 
 		// now in Hiragana or Katakana mode
@@ -140,11 +197,6 @@ func Process(key termi.Key) (string, bool) {
 			return output.String(), true
 		}
 
-		if r == termi.RuneEnter {
-			output.WriteRune(r)
-			return output.String(), false
-		}
-
 		if r == termi.RuneEscape {
 			romajiMode = RomajiDirect
 			kanaBuilder.Reset()
@@ -152,6 +204,12 @@ func Process(key termi.Key) (string, bool) {
 			if convMode != ConvNone {
 				flush()
 				resetConv()
+			}
+
+			if lineMode {
+				output.WriteString(lineBuffer.String())
+				lineBuffer.Reset()
+				lineMode = false
 			}
 
 			output.WriteRune(r)
@@ -246,14 +304,24 @@ func Process(key termi.Key) (string, bool) {
 				if convOkuri.Len() > 0 &&
 					!strings.HasSuffix(convOkuri.String(), "っ") &&
 					!strings.HasSuffix(convOkuri.String(), "ッ") {
-					output.WriteString(convCand)
-					output.WriteString(convOkuri.String())
+					if lineMode {
+						lineBuffer.WriteString(convCand)
+						lineBuffer.WriteString(convOkuri.String())
+					} else {
+						output.WriteString(convCand)
+						output.WriteString(convOkuri.String())
+					}
 					resetConv()
 					kanaBuilder.Reset()
 				}
 			} else {
-				output.WriteString(convCand)
-				output.WriteString(convOkuri.String())
+				if lineMode {
+					lineBuffer.WriteString(convCand)
+					lineBuffer.WriteString(convOkuri.String())
+				} else {
+					output.WriteString(convCand)
+					output.WriteString(convOkuri.String())
+				}
 				resetConv()
 			}
 		}
@@ -278,7 +346,12 @@ func Process(key termi.Key) (string, bool) {
 
 			update := kanaBuilder.Len() > 0
 			kanaBuilder.Reset()
-			output.WriteString(kigou)
+			if lineMode {
+				lineBuffer.WriteString(kigou)
+				update = true
+			} else {
+				output.WriteString(kigou)
+			}
 			return output.String(), update
 		}
 
@@ -290,7 +363,12 @@ func Process(key termi.Key) (string, bool) {
 				update = true
 			}
 
-			output.WriteRune(r)
+			if lineMode {
+				lineBuffer.WriteRune(r)
+				update = true
+			} else {
+				output.WriteRune(r)
+			}
 			return output.String(), update
 		}
 
@@ -384,7 +462,11 @@ func Process(key termi.Key) (string, bool) {
 
 		if convMode == ConvNone {
 			if kana != "" {
-				output.WriteString(kana)
+				if lineMode {
+					lineBuffer.WriteString(kana)
+				} else {
+					output.WriteString(kana)
+				}
 			}
 			return output.String(), true
 		} else if convMode == ConvStart {
@@ -473,5 +555,9 @@ func Status() string {
 		buf = kanaBuilder.String()
 	}
 
-	return fmt.Sprintf("[%s]%s%s", mark, head, buf)
+	if lineMode {
+		return fmt.Sprintf("[%s]%s:%s%s", mark, lineBuffer.String(), head, buf)
+	} else {
+		return fmt.Sprintf("[%s]%s%s", mark, head, buf)
+	}
 }
