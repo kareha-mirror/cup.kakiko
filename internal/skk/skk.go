@@ -67,9 +67,7 @@ func Process(key termi.Key) (string, bool) {
 		r := key.Rune
 
 		if r == termi.RuneBackspace || r == termi.RuneDelete {
-			if lineMode && lineBuffer.RemoveTail() {
-				return "", true
-			} else if kanaBuilder.RemoveTail() {
+			if kanaBuilder.RemoveTail() {
 				return "", true
 			} else if convOkuri.RemoveTail() {
 				return "", true
@@ -81,6 +79,8 @@ func Process(key termi.Key) (string, bool) {
 				convList = []string{}
 				convIndex = 0
 				convCand = ""
+				return "", true
+			} else if lineMode && lineBuffer.RemoveTail() {
 				return "", true
 			} else {
 				return string(r), false
@@ -103,28 +103,14 @@ func Process(key termi.Key) (string, bool) {
 			}
 		}
 
-		// Ctrl-J
-		if r == '\n' {
-			if convMode != ConvNone {
-				flush()
-			}
-
-			romajiMode = RomajiHiragana
-			kanaBuilder.Reset()
-
-			resetConv()
-
-			return output.String(), true
-		}
-
 		// Ctrl-L
 		if r == '\f' {
 			if linePass {
 				linePass = false
 				output.WriteRune(r)
-				return output.String(), false
+			} else {
+				linePass = true
 			}
-			linePass = true
 
 			if lineMode {
 				lineMode = false
@@ -138,6 +124,20 @@ func Process(key termi.Key) (string, bool) {
 			return output.String(), true
 		}
 		linePass = false
+
+		// Ctrl-J
+		if r == '\n' {
+			if convMode != ConvNone {
+				flush()
+			}
+
+			romajiMode = RomajiHiragana
+			kanaBuilder.Reset()
+
+			resetConv()
+
+			return output.String(), true
+		}
 
 		if romajiMode == RomajiAlphabet {
 			alphabet, ok := romaji.HankakuToZenkaku[string(r)]
