@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/creack/pty"
@@ -14,7 +15,7 @@ import (
 type Process func(key termi.Key) (string, bool)
 type Status func() string
 
-const defaultCommand = "/bin/sh"
+const fallbackCommand = "/bin/sh"
 const bufferSize = 1024
 
 type FEP struct {
@@ -51,9 +52,21 @@ func writeStringAll(fd *os.File, s string) error {
 }
 
 func Init(args []string, process Process, status Status) *FEP {
-	var command string = defaultCommand
+	var command string
 	var arguments []string
-	if len(args) > 1 {
+	if len(args) < 2 {
+		command = fallbackCommand
+		for _, line := range os.Environ() {
+			if strings.HasPrefix(line, "SHELL=") {
+				i := strings.Index(line, "=")
+				c := line[i+1:]
+				if c != "" {
+					command = c
+				}
+				break
+			}
+		}
+	} else {
 		command = args[1]
 	}
 	if len(args) > 2 {
