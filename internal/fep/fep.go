@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/creack/pty"
@@ -55,16 +54,9 @@ func Init(args []string, process Process, status Status) *FEP {
 	var command string
 	var arguments []string
 	if len(args) < 2 {
-		command = fallbackCommand
-		for _, line := range os.Environ() {
-			if strings.HasPrefix(line, "SHELL=") {
-				i := strings.Index(line, "=")
-				c := line[i+1:]
-				if c != "" {
-					command = c
-				}
-				break
-			}
+		command = os.Getenv("SHELL")
+		if command == "" {
+			command = fallbackCommand
 		}
 	} else {
 		command = args[1]
