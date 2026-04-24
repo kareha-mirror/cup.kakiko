@@ -11,16 +11,16 @@ import (
 	"tea.kareha.org/cup/termi"
 )
 
-type Process func(key termi.Key) (string, bool)
-type Status func() string
+type Engine interface {
+	Process(key termi.Key) (string, bool)
+	Status() string
+}
 
-const fallbackCommand = "/bin/sh"
 const bufferSize = 1024
 
 type FEP struct {
 	fd       *os.File
-	process  Process
-	status   Status
+	en       Engine
 	listener termi.EscapeListener
 	esc      bool
 }
@@ -50,21 +50,7 @@ func writeStringAll(fd *os.File, s string) error {
 	return nil
 }
 
-func Init(args []string, process Process, status Status) *FEP {
-	var command string
-	var arguments []string
-	if len(args) < 2 {
-		command = os.Getenv("SHELL")
-		if command == "" {
-			command = fallbackCommand
-		}
-	} else {
-		command = args[1]
-	}
-	if len(args) > 2 {
-		arguments = args[2:]
-	}
-	var c = exec.Command(command, arguments...)
+func Init(c *exec.Cmd, en Engine) *FEP {
 	fd, err := pty.Start(c)
 	if err != nil {
 		panic(err)
@@ -72,8 +58,7 @@ func Init(args []string, process Process, status Status) *FEP {
 
 	f := &FEP{
 		fd:       fd,
-		process:  process,
-		status:   status,
+		en:       en,
 		listener: nil,
 		esc:      false,
 	}
@@ -99,7 +84,7 @@ func Init(args []string, process Process, status Status) *FEP {
 	go func() {
 		for {
 			key := termi.ReadKey()
-			processed, update := f.process(key)
+			processed, update := f.en.Process(key)
 			if processed != "" {
 				err = writeStringAll(fd, processed)
 				if err != nil {
@@ -144,7 +129,7 @@ func (f *FEP) drawStatus() {
 	termi.HideCursor()
 	termi.MoveCursor(0, h-1)
 
-	status := f.status()
+	status := f.en.Status()
 	termi.Print(status)
 	termi.ClearTail()
 

@@ -1,45 +1,14 @@
-// jisyo.go - SKK-JISYO-E v1 over CDB backend
-// API:
-//   import "tea.kareha.org/cup/kakiko/internal/skk"
-//   skk.Lookup(reading)
-//   skk.LookupOkuri(key, okuriKana)
-
 package skk
 
 import (
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"unicode/utf8"
-
-	"github.com/colinmarc/cdb"
 )
 
-var database *cdb.CDB
-
-func JisyoPath() (string, error) {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return "", err
-	}
-	path := filepath.Join(dir, "kakiko", "SKK-JISYO.L.cdb")
-	return path, nil
-}
-
-func Db() (*cdb.CDB, error) {
-	if database == nil {
-		path, err := JisyoPath()
-		if err != nil {
-			return nil, err
-		}
-		db, err := cdb.Open(path)
-		if err != nil {
-			return nil, err
-		}
-		database = db
-	}
-	return database, nil
+type Jisyo interface {
+	Lookup(reading string) ([]string, error)
+	LookupOkuri(key, okuriKana string) ([]string, error)
 }
 
 // \\ \/ \; \[ \] \n \t \" \' \u{...}
@@ -259,36 +228,4 @@ func parseBody(line string) ([]string, map[string][]string) {
 	}
 
 	return defaults, blocks
-}
-
-func Lookup(reading string) ([]string, error) {
-	db, err := Db()
-	if err != nil {
-		return []string{}, err
-	}
-	body, err := db.Get([]byte(reading))
-	if err != nil {
-		return []string{}, err
-	}
-	defaults, _ := parseBody(string(body))
-	return defaults, nil
-}
-
-func LookupOkuri(key, okuriKana string) ([]string, error) {
-	db, err := Db()
-	if err != nil {
-		return []string{}, err
-	}
-	body, err := db.Get([]byte(key))
-	if err != nil {
-		return []string{}, err
-	}
-	defaults, blocks := parseBody(string(body))
-	if okuriKana != "" && len(blocks) > 0 {
-		result, ok := blocks[okuriKana]
-		if ok && len(result) > 0 {
-			return result, nil
-		}
-	}
-	return defaults, nil
 }

@@ -9,39 +9,67 @@ import (
 	"tea.kareha.org/cup/kakiko/internal/romaji"
 )
 
-type RomajiMode int
+type romajiMode int
 
 const (
-	RomajiDirect RomajiMode = iota
-	RomajiHiragana
-	RomajiKatakana
-	RomajiAlphabet
+	romajiDirect romajiMode = iota
+	romajiHiragana
+	romajiKatakana
+	romajiAlphabet
 )
 
-type ConvMode int
+type convMode int
 
 const (
-	ConvNone ConvMode = iota
-	ConvStart
-	ConvOkuri
-	ConvEnglish
+	convNone convMode = iota
+	convStart
+	convOkuri
+	convEnglish
 )
 
-var romajiMode = RomajiDirect
-var kanaBuilder = new(termi.StringBuilder)
-var convMode = ConvNone
-var convBuilder = new(termi.StringBuilder)
-var hasConvList = false
-var convList = []string{}
-var convIndex = 0
-var convCand = ""
-var convOkuri = new(termi.StringBuilder)
+type Engine struct {
+	j Jisyo
 
-var lineMode = false
-var lineBuffer = new(termi.StringBuilder)
-var linePass = false
+	romajiMode  romajiMode
+	kanaBuilder *termi.StringBuilder
+	convMode    convMode
+	convBuilder *termi.StringBuilder
+	hasConvList bool
+	convList    []string
+	convIndex   int
+	convCand    string
+	convOkuri   *termi.StringBuilder
 
-var message = ""
+	lineMode   bool
+	lineBuffer *termi.StringBuilder
+	linePass   bool
+
+	message string
+}
+
+func NewEngine(path string) *Engine {
+	en := &Engine{
+		j: NewCDBJisyo(path),
+
+		romajiMode:  romajiDirect,
+		kanaBuilder: new(termi.StringBuilder),
+		convMode:    convNone,
+		convBuilder: new(termi.StringBuilder),
+		hasConvList: false,
+		convList:    []string{},
+		convIndex:   0,
+		convCand:    "",
+		convOkuri:   new(termi.StringBuilder),
+
+		lineMode:   false,
+		lineBuffer: new(termi.StringBuilder),
+		linePass:   false,
+
+		message: "",
+	}
+
+	return en
+}
 
 var vowels = map[string]string{
 	"あ": "a",
@@ -51,36 +79,36 @@ var vowels = map[string]string{
 	"お": "o",
 }
 
-func resetConv() {
-	convMode = ConvNone
-	convBuilder.Reset()
-	hasConvList = false
-	convList = []string{}
-	convIndex = 0
-	convCand = ""
-	convOkuri.Reset()
+func (en *Engine) resetConv() {
+	en.convMode = convNone
+	en.convBuilder.Reset()
+	en.hasConvList = false
+	en.convList = []string{}
+	en.convIndex = 0
+	en.convCand = ""
+	en.convOkuri.Reset()
 }
 
-func Process(key termi.Key) (string, bool) {
+func (en *Engine) Process(key termi.Key) (string, bool) {
 	switch key.Kind {
 	case termi.KeyRune:
 		r := key.Rune
 
 		if r == termi.RuneBackspace || r == termi.RuneDelete {
-			if kanaBuilder.RemoveTail() {
+			if en.kanaBuilder.RemoveTail() {
 				return "", true
-			} else if convOkuri.RemoveTail() {
+			} else if en.convOkuri.RemoveTail() {
 				return "", true
-			} else if convMode != ConvNone && convBuilder.RemoveTail() {
-				if convBuilder.Len() < 1 {
-					convMode = ConvNone
+			} else if en.convMode != convNone && en.convBuilder.RemoveTail() {
+				if en.convBuilder.Len() < 1 {
+					en.convMode = convNone
 				}
-				hasConvList = false
-				convList = []string{}
-				convIndex = 0
-				convCand = ""
+				en.hasConvList = false
+				en.convList = []string{}
+				en.convIndex = 0
+				en.convCand = ""
 				return "", true
-			} else if lineMode && lineBuffer.RemoveTail() {
+			} else if en.lineMode && en.lineBuffer.RemoveTail() {
 				return "", true
 			} else {
 				return string(r), false
@@ -91,13 +119,13 @@ func Process(key termi.Key) (string, bool) {
 
 		flush := func() {
 			var out string
-			if convCand != "" {
-				out = convCand + convOkuri.String()
+			if en.convCand != "" {
+				out = en.convCand + en.convOkuri.String()
 			} else {
-				out = convBuilder.String() + convOkuri.String()
+				out = en.convBuilder.String() + en.convOkuri.String()
 			}
-			if lineMode {
-				lineBuffer.WriteString(out)
+			if en.lineMode {
+				en.lineBuffer.WriteString(out)
 			} else {
 				output.WriteString(out)
 			}
@@ -105,45 +133,45 @@ func Process(key termi.Key) (string, bool) {
 
 		// Ctrl-L
 		if r == '\f' {
-			if linePass {
-				linePass = false
+			if en.linePass {
+				en.linePass = false
 				output.WriteRune(r)
 			} else {
-				linePass = true
+				en.linePass = true
 			}
 
-			if lineMode {
-				lineMode = false
+			if en.lineMode {
+				en.lineMode = false
 				flush()
-				output.WriteString(lineBuffer.String())
-				lineBuffer.Reset()
+				output.WriteString(en.lineBuffer.String())
+				en.lineBuffer.Reset()
 			} else {
-				lineMode = true
+				en.lineMode = true
 			}
 
 			return output.String(), true
 		}
-		linePass = false
+		en.linePass = false
 
 		// Ctrl-J
 		if r == '\n' {
-			if convMode != ConvNone {
+			if en.convMode != convNone {
 				flush()
 			}
 
-			romajiMode = RomajiHiragana
-			kanaBuilder.Reset()
+			en.romajiMode = romajiHiragana
+			en.kanaBuilder.Reset()
 
-			resetConv()
+			en.resetConv()
 
 			return output.String(), true
 		}
 
-		if romajiMode == RomajiAlphabet {
+		if en.romajiMode == romajiAlphabet {
 			alphabet, ok := romaji.HankakuToZenkaku[string(r)]
 			if ok {
-				if lineMode {
-					lineBuffer.WriteString(alphabet)
+				if en.lineMode {
+					en.lineBuffer.WriteString(alphabet)
 					return output.String(), true
 				} else {
 					output.WriteString(alphabet)
@@ -152,11 +180,11 @@ func Process(key termi.Key) (string, bool) {
 			return output.String(), false
 		}
 
-		if r == termi.RuneEnter && convMode == ConvNone {
-			if lineMode {
-				if lineBuffer.Len() > 0 {
-					output.WriteString(lineBuffer.String())
-					lineBuffer.Reset()
+		if r == termi.RuneEnter && en.convMode == convNone {
+			if en.lineMode {
+				if en.lineBuffer.Len() > 0 {
+					output.WriteString(en.lineBuffer.String())
+					en.lineBuffer.Reset()
 				} else {
 					output.WriteRune(r)
 				}
@@ -167,9 +195,9 @@ func Process(key termi.Key) (string, bool) {
 			}
 		}
 
-		if romajiMode == RomajiDirect {
-			if lineMode {
-				lineBuffer.WriteRune(r)
+		if en.romajiMode == romajiDirect {
+			if en.lineMode {
+				en.lineBuffer.WriteRune(r)
 				return output.String(), true
 			} else {
 				output.WriteRune(r)
@@ -180,36 +208,36 @@ func Process(key termi.Key) (string, bool) {
 		// now in Hiragana or Katakana mode
 
 		if r == 'L' {
-			romajiMode = RomajiAlphabet
-			kanaBuilder.Reset()
+			en.romajiMode = romajiAlphabet
+			en.kanaBuilder.Reset()
 
-			if convMode != ConvNone {
+			if en.convMode != convNone {
 				flush()
-				resetConv()
+				en.resetConv()
 			}
 
 			return output.String(), true
 		}
 
-		if r == termi.RuneEnter && convMode != ConvNone {
+		if r == termi.RuneEnter && en.convMode != convNone {
 			flush()
-			resetConv()
+			en.resetConv()
 			return output.String(), true
 		}
 
 		if r == termi.RuneEscape {
-			romajiMode = RomajiDirect
-			kanaBuilder.Reset()
+			en.romajiMode = romajiDirect
+			en.kanaBuilder.Reset()
 
-			if convMode != ConvNone {
+			if en.convMode != convNone {
 				flush()
-				resetConv()
+				en.resetConv()
 			}
 
-			if lineMode {
-				output.WriteString(lineBuffer.String())
-				lineBuffer.Reset()
-				lineMode = false
+			if en.lineMode {
+				output.WriteString(en.lineBuffer.String())
+				en.lineBuffer.Reset()
+				en.lineMode = false
 			}
 
 			output.WriteRune(r)
@@ -221,59 +249,59 @@ func Process(key termi.Key) (string, bool) {
 			return output.String(), false
 		}
 
-		if r == ' ' && convMode != ConvNone {
-			if !hasConvList {
+		if r == ' ' && en.convMode != convNone {
+			if !en.hasConvList {
 				var err error
-				if convMode == ConvOkuri {
-					convList, err = LookupOkuri(
-						convBuilder.String(), convOkuri.String(),
+				if en.convMode == convOkuri {
+					en.convList, err = en.j.LookupOkuri(
+						en.convBuilder.String(), en.convOkuri.String(),
 					)
 				} else {
-					convList, err = Lookup(convBuilder.String())
+					en.convList, err = en.j.Lookup(en.convBuilder.String())
 				}
-				convIndex = 0
+				en.convIndex = 0
 				if err != nil {
-					message = fmt.Sprintf("%v", err)
-					hasConvList = false
+					en.message = fmt.Sprintf("%v", err)
+					en.hasConvList = false
 				} else {
-					if len(convList) < 1 {
-						message = "SKK: 候補なし"
+					if len(en.convList) < 1 {
+						en.message = "SKK: 候補なし"
 						return output.String(), true
 					}
-					hasConvList = true
+					en.hasConvList = true
 				}
 			} else {
-				convIndex++
-				if convIndex >= len(convList) {
-					convIndex = max(len(convList)-1, 0)
+				en.convIndex++
+				if en.convIndex >= len(en.convList) {
+					en.convIndex = max(len(en.convList)-1, 0)
 				}
 			}
-			if convIndex < len(convList) {
-				convCand = convList[convIndex]
-				semicolon := strings.Index(convCand, ";")
+			if en.convIndex < len(en.convList) {
+				en.convCand = en.convList[en.convIndex]
+				semicolon := strings.Index(en.convCand, ";")
 				if semicolon >= 0 {
-					convCand = convCand[:semicolon]
+					en.convCand = en.convCand[:semicolon]
 				}
 			} else {
-				convCand = ""
+				en.convCand = ""
 			}
 			return output.String(), true
 		}
 
-		if r == 'x' && hasConvList {
-			convIndex--
-			if convIndex < 0 {
-				hasConvList = false
-				convList = []string{}
-				convIndex = 0
-				convCand = ""
-				convOkuri.Reset()
+		if r == 'x' && en.hasConvList {
+			en.convIndex--
+			if en.convIndex < 0 {
+				en.hasConvList = false
+				en.convList = []string{}
+				en.convIndex = 0
+				en.convCand = ""
+				en.convOkuri.Reset()
 			} else {
-				if convIndex < len(convList) {
-					convCand = convList[convIndex]
-					semicolon := strings.Index(convCand, ";")
+				if en.convIndex < len(en.convList) {
+					en.convCand = en.convList[en.convIndex]
+					semicolon := strings.Index(en.convCand, ";")
 					if semicolon >= 0 {
-						convCand = convCand[:semicolon]
+						en.convCand = en.convCand[:semicolon]
 					}
 				}
 			}
@@ -281,73 +309,73 @@ func Process(key termi.Key) (string, bool) {
 		}
 
 		if r == '/' {
-			if hasConvList {
+			if en.hasConvList {
 				flush()
-				resetConv()
+				en.resetConv()
 			}
-			convMode = ConvEnglish
+			en.convMode = convEnglish
 			return output.String(), true
 		}
 
-		if convMode == ConvEnglish {
-			if hasConvList {
+		if en.convMode == convEnglish {
+			if en.hasConvList {
 				flush()
-				resetConv()
+				en.resetConv()
 			} else {
-				convBuilder.WriteRune(r)
+				en.convBuilder.WriteRune(r)
 				return output.String(), true
 			}
 		}
 
-		if convCand != "" {
-			if convMode == ConvOkuri {
-				if convOkuri.Len() > 0 &&
-					!strings.HasSuffix(convOkuri.String(), "っ") &&
-					!strings.HasSuffix(convOkuri.String(), "ッ") {
-					if lineMode {
-						lineBuffer.WriteString(convCand)
-						lineBuffer.WriteString(convOkuri.String())
+		if en.convCand != "" {
+			if en.convMode == convOkuri {
+				if en.convOkuri.Len() > 0 &&
+					!strings.HasSuffix(en.convOkuri.String(), "っ") &&
+					!strings.HasSuffix(en.convOkuri.String(), "ッ") {
+					if en.lineMode {
+						en.lineBuffer.WriteString(en.convCand)
+						en.lineBuffer.WriteString(en.convOkuri.String())
 					} else {
-						output.WriteString(convCand)
-						output.WriteString(convOkuri.String())
+						output.WriteString(en.convCand)
+						output.WriteString(en.convOkuri.String())
 					}
-					resetConv()
-					kanaBuilder.Reset()
+					en.resetConv()
+					en.kanaBuilder.Reset()
 				}
 			} else {
-				if lineMode {
-					lineBuffer.WriteString(convCand)
-					lineBuffer.WriteString(convOkuri.String())
+				if en.lineMode {
+					en.lineBuffer.WriteString(en.convCand)
+					en.lineBuffer.WriteString(en.convOkuri.String())
 				} else {
-					output.WriteString(convCand)
-					output.WriteString(convOkuri.String())
+					output.WriteString(en.convCand)
+					output.WriteString(en.convOkuri.String())
 				}
-				resetConv()
+				en.resetConv()
 			}
 		}
 
 		if r >= 'A' && r <= 'Z' {
-			if convMode == ConvNone {
-				convMode = ConvStart
-			} else if convMode == ConvStart {
-				convMode = ConvOkuri
+			if en.convMode == convNone {
+				en.convMode = convStart
+			} else if en.convMode == convStart {
+				en.convMode = convOkuri
 			}
 			r += 'a' - 'A'
 		}
 
 		kigou, ok := romaji.ToKigou[string(r)]
 		if ok {
-			if convMode != ConvNone && kigou == "ー" {
-				if !hasConvList {
-					convBuilder.WriteString(kigou)
+			if en.convMode != convNone && kigou == "ー" {
+				if !en.hasConvList {
+					en.convBuilder.WriteString(kigou)
 					return output.String(), true
 				}
 			}
 
-			update := kanaBuilder.Len() > 0
-			kanaBuilder.Reset()
-			if lineMode {
-				lineBuffer.WriteString(kigou)
+			update := en.kanaBuilder.Len() > 0
+			en.kanaBuilder.Reset()
+			if en.lineMode {
+				en.lineBuffer.WriteString(kigou)
 				update = true
 			} else {
 				output.WriteString(kigou)
@@ -357,14 +385,14 @@ func Process(key termi.Key) (string, bool) {
 
 		if r < 'a' && r > 'z' {
 			update := false
-			if convMode != ConvNone {
+			if en.convMode != convNone {
 				flush()
-				resetConv()
+				en.resetConv()
 				update = true
 			}
 
-			if lineMode {
-				lineBuffer.WriteRune(r)
+			if en.lineMode {
+				en.lineBuffer.WriteRune(r)
 				update = true
 			} else {
 				output.WriteRune(r)
@@ -373,146 +401,146 @@ func Process(key termi.Key) (string, bool) {
 		}
 
 		if r == 'l' {
-			romajiMode = RomajiDirect
-			kanaBuilder.Reset()
+			en.romajiMode = romajiDirect
+			en.kanaBuilder.Reset()
 
-			if convMode != ConvNone {
+			if en.convMode != convNone {
 				flush()
-				resetConv()
+				en.resetConv()
 			}
 
 			return output.String(), true
 		}
 
 		if r == 'q' {
-			if convMode == ConvNone {
-				if romajiMode == RomajiHiragana {
-					romajiMode = RomajiKatakana
-				} else if romajiMode == RomajiKatakana {
-					romajiMode = RomajiHiragana
+			if en.convMode == convNone {
+				if en.romajiMode == romajiHiragana {
+					en.romajiMode = romajiKatakana
+				} else if en.romajiMode == romajiKatakana {
+					en.romajiMode = romajiHiragana
 				} else {
-					panic("q: invalid romajiMode == " + string(romajiMode))
+					panic("q: invalid romajiMode == " + string(en.romajiMode))
 				}
 				return output.String(), true
-			} else if convMode == ConvStart {
-				if romajiMode == RomajiHiragana {
-					kata := romaji.HiraToKata(convBuilder.String())
-					hasConvList = false
-					convList = []string{kata}
-					convIndex = 0
-					convCand = kata
-				} else if romajiMode == RomajiKatakana {
-					hira := romaji.KataToHira(convBuilder.String())
-					hasConvList = false
-					convList = []string{hira}
-					convIndex = 0
-					convCand = hira
+			} else if en.convMode == convStart {
+				if en.romajiMode == romajiHiragana {
+					kata := romaji.HiraToKata(en.convBuilder.String())
+					en.hasConvList = false
+					en.convList = []string{kata}
+					en.convIndex = 0
+					en.convCand = kata
+				} else if en.romajiMode == romajiKatakana {
+					hira := romaji.KataToHira(en.convBuilder.String())
+					en.hasConvList = false
+					en.convList = []string{hira}
+					en.convIndex = 0
+					en.convCand = hira
 				} else {
 					panic("q (conv): invalid romajiMode == " +
-						string(romajiMode))
+						string(en.romajiMode))
 				}
 				return output.String(), true
 			}
 		}
 
-		kanaBuilder.WriteRune(r)
+		en.kanaBuilder.WriteRune(r)
 
 		var kana string
-		if _, ok := romaji.IsSokuon[kanaBuilder.String()]; ok {
-			if romajiMode == RomajiHiragana {
+		if _, ok := romaji.IsSokuon[en.kanaBuilder.String()]; ok {
+			if en.romajiMode == romajiHiragana {
 				kana = "っ"
-			} else if romajiMode == RomajiKatakana {
+			} else if en.romajiMode == romajiKatakana {
 				kana = "ッ"
 			} else {
-				panic("sokuon: invalid romajiMode == " + string(romajiMode))
+				panic("sokuon: invalid romajiMode == " + string(en.romajiMode))
 				kana = ""
 			}
-			kanaBuilder.RemoveHead()
-		} else if _, ok := romaji.IsN[kanaBuilder.String()]; ok {
-			if romajiMode == RomajiHiragana {
+			en.kanaBuilder.RemoveHead()
+		} else if _, ok := romaji.IsN[en.kanaBuilder.String()]; ok {
+			if en.romajiMode == romajiHiragana {
 				kana = "ん"
-			} else if romajiMode == RomajiKatakana {
+			} else if en.romajiMode == romajiKatakana {
 				kana = "ン"
 			} else {
-				panic("n: invalid romajiMode == " + string(romajiMode))
+				panic("n: invalid romajiMode == " + string(en.romajiMode))
 				kana = ""
 			}
-			kanaBuilder.RemoveHead()
+			en.kanaBuilder.RemoveHead()
 		} else {
-			lookup := kanaBuilder.String()
+			lookup := en.kanaBuilder.String()
 			alias, ok := romaji.Aliases[lookup]
 			if ok {
 				lookup = alias
 			}
 
 			var k string
-			if romajiMode == RomajiHiragana {
+			if en.romajiMode == romajiHiragana {
 				k, ok = romaji.ToHiragana[lookup]
-			} else if romajiMode == RomajiKatakana {
+			} else if en.romajiMode == romajiKatakana {
 				k, ok = romaji.ToKatakana[lookup]
 			} else {
-				panic("kana: invalid romajiMode == " + string(romajiMode))
+				panic("kana: invalid romajiMode == " + string(en.romajiMode))
 				kana = ""
 			}
 			if ok {
 				kana = k
-				kanaBuilder.Reset()
+				en.kanaBuilder.Reset()
 			}
 		}
 
-		if convMode == ConvNone {
+		if en.convMode == convNone {
 			if kana != "" {
-				if lineMode {
-					lineBuffer.WriteString(kana)
+				if en.lineMode {
+					en.lineBuffer.WriteString(kana)
 				} else {
 					output.WriteString(kana)
 				}
 			}
 			return output.String(), true
-		} else if convMode == ConvStart {
+		} else if en.convMode == convStart {
 			if kana != "" {
-				convBuilder.WriteString(kana)
-				hasConvList = false
-				convList = []string{}
-				convIndex = 0
-				convCand = ""
+				en.convBuilder.WriteString(kana)
+				en.hasConvList = false
+				en.convList = []string{}
+				en.convIndex = 0
+				en.convCand = ""
 			}
 			return output.String(), true
-		} else if convMode == ConvOkuri {
+		} else if en.convMode == convOkuri {
 			vowel, ok := vowels[kana]
 			if ok {
-				convBuilder.WriteString(vowel)
-				convOkuri.WriteString(kana)
+				en.convBuilder.WriteString(vowel)
+				en.convOkuri.WriteString(kana)
 			} else if kana != "" {
-				convOkuri.WriteString(kana)
+				en.convOkuri.WriteString(kana)
 			} else {
-				convBuilder.WriteRune(r)
+				en.convBuilder.WriteRune(r)
 			}
 
 			var err error
-			convList, err = LookupOkuri(
-				convBuilder.String(), convOkuri.String(),
+			en.convList, err = en.j.LookupOkuri(
+				en.convBuilder.String(), en.convOkuri.String(),
 			)
-			convIndex = 0
+			en.convIndex = 0
 			if err != nil {
-				message = fmt.Sprintf("%v", err)
-				convCand = ""
+				en.message = fmt.Sprintf("%v", err)
+				en.convCand = ""
 			} else {
-				if convIndex < len(convList) {
-					convCand = convList[convIndex]
-					semicolon := strings.Index(convCand, ";")
+				if en.convIndex < len(en.convList) {
+					en.convCand = en.convList[en.convIndex]
+					semicolon := strings.Index(en.convCand, ";")
 					if semicolon >= 0 {
-						convCand = convCand[:semicolon]
+						en.convCand = en.convCand[:semicolon]
 					}
-					hasConvList = true
+					en.hasConvList = true
 				} else {
-					convCand = ""
+					en.convCand = ""
 				}
 			}
 
 			return output.String(), true
 		} else {
-			panic("Process: invalid convMode == " + string(convMode))
+			panic("Process: invalid convMode == " + string(en.convMode))
 			return output.String(), false
 		}
 	default:
@@ -520,43 +548,45 @@ func Process(key termi.Key) (string, bool) {
 	}
 }
 
-func Status() string {
-	if message != "" {
-		m := message
-		message = ""
+func (en *Engine) Status() string {
+	if en.message != "" {
+		m := en.message
+		en.message = ""
 		return m
 	}
 
 	var mark string
-	switch romajiMode {
-	case RomajiHiragana:
+	switch en.romajiMode {
+	case romajiHiragana:
 		mark = "あ"
-	case RomajiKatakana:
+	case romajiKatakana:
 		mark = "ア"
-	case RomajiAlphabet:
+	case romajiAlphabet:
 		mark = "ａＡ"
-	default: // RomajiDirect
+	default: // romajiDirect
 		mark = "aA"
 	}
 
 	head := ""
-	if convMode != ConvNone {
-		if len(convCand) > 0 {
-			head = "▼" + convCand
+	if en.convMode != convNone {
+		if len(en.convCand) > 0 {
+			head = "▼" + en.convCand
 		} else {
-			head = "▽" + convBuilder.String()
+			head = "▽" + en.convBuilder.String()
 		}
 	}
 
 	var buf string
-	if len(convOkuri.String()) > 0 {
-		buf = convOkuri.String()
+	if len(en.convOkuri.String()) > 0 {
+		buf = en.convOkuri.String()
 	} else {
-		buf = kanaBuilder.String()
+		buf = en.kanaBuilder.String()
 	}
 
-	if lineMode {
-		return fmt.Sprintf("[%s]%s:%s%s", mark, lineBuffer.String(), head, buf)
+	if en.lineMode {
+		return fmt.Sprintf(
+			"[%s]%s:%s%s", mark, en.lineBuffer.String(), head, buf,
+		)
 	} else {
 		return fmt.Sprintf("[%s]%s%s", mark, head, buf)
 	}
