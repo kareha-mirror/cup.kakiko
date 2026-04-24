@@ -383,7 +383,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			return output.String(), update
 		}
 
-		if r < 'a' && r > 'z' {
+		if r < 'a' || r > 'z' {
 			update := false
 			if en.convMode != convNone {
 				flush()
