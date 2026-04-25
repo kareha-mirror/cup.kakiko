@@ -40,9 +40,9 @@ type Engine struct {
 	convCand    string
 	convOkuri   *termi.StringBuilder
 
-	lineMode   bool
-	lineBuffer *termi.StringBuilder
-	linePass   bool
+	lineMode    bool
+	lineBuilder *termi.StringBuilder
+	linePass    bool
 
 	message string
 }
@@ -61,9 +61,9 @@ func NewEngine(path string) *Engine {
 		convCand:    "",
 		convOkuri:   new(termi.StringBuilder),
 
-		lineMode:   false,
-		lineBuffer: new(termi.StringBuilder),
-		linePass:   false,
+		lineMode:    false,
+		lineBuilder: new(termi.StringBuilder),
+		linePass:    false,
 
 		message: "",
 	}
@@ -108,7 +108,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				en.convIndex = 0
 				en.convCand = ""
 				return "", true
-			} else if en.lineMode && en.lineBuffer.RemoveTail() {
+			} else if en.lineMode && en.lineBuilder.RemoveTail() {
 				return "", true
 			} else {
 				return string(r), false
@@ -125,7 +125,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				out = en.convBuilder.String() + en.convOkuri.String()
 			}
 			if en.lineMode {
-				en.lineBuffer.WriteString(out)
+				en.lineBuilder.WriteString(out)
 			} else {
 				output.WriteString(out)
 			}
@@ -171,8 +171,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			if en.lineMode {
 				en.lineMode = false
 				flush()
-				output.WriteString(en.lineBuffer.String())
-				en.lineBuffer.Reset()
+				output.WriteString(en.lineBuilder.String())
+				en.lineBuilder.Reset()
 			} else {
 				en.lineMode = true
 			}
@@ -193,7 +193,9 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				flush()
 			}
 
-			en.inputMode = inputHira
+			if en.inputMode != inputHira && en.inputMode != inputKata {
+				en.inputMode = inputHira
+			}
 			en.kanaBuilder.Reset()
 
 			en.resetConv()
@@ -205,7 +207,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			alphabet, ok := romaji.ToZen[string(r)]
 			if ok {
 				if en.lineMode {
-					en.lineBuffer.WriteString(alphabet)
+					en.lineBuilder.WriteString(alphabet)
 					return output.String(), true
 				} else {
 					output.WriteString(alphabet)
@@ -216,9 +218,9 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 
 		if r == termi.RuneEnter && en.convMode == convNone {
 			if en.lineMode {
-				if en.lineBuffer.Len() > 0 {
-					output.WriteString(en.lineBuffer.String())
-					en.lineBuffer.Reset()
+				if en.lineBuilder.Len() > 0 {
+					output.WriteString(en.lineBuilder.String())
+					en.lineBuilder.Reset()
 				} else {
 					output.WriteRune(r)
 				}
@@ -231,7 +233,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 
 		if en.inputMode == inputASCII {
 			if en.lineMode {
-				en.lineBuffer.WriteRune(r)
+				en.lineBuilder.WriteRune(r)
 				return output.String(), true
 			} else {
 				output.WriteRune(r)
@@ -269,8 +271,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			}
 
 			if en.lineMode {
-				output.WriteString(en.lineBuffer.String())
-				en.lineBuffer.Reset()
+				output.WriteString(en.lineBuilder.String())
+				en.lineBuilder.Reset()
 				en.lineMode = false
 			}
 
@@ -285,6 +287,15 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 
 		if r == ' ' && en.convMode != convNone {
 			if !en.hasConvList {
+				if en.kanaBuilder.String() == "n" {
+					if en.inputMode == inputHira {
+						en.convBuilder.WriteString("ん")
+					} else if en.inputMode == inputKata {
+						en.convBuilder.WriteString("ン")
+					}
+					en.kanaBuilder.Reset()
+				}
+
 				body := en.convBuilder.String()
 				body = romaji.KataToHira(body)
 				var err error
@@ -301,7 +312,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 					en.hasConvList = false
 				} else {
 					if len(en.convList) < 1 {
-						en.message = "SKK: 候補なし"
+						en.message = "候補なし"
 						return output.String(), true
 					}
 					en.hasConvList = true
@@ -369,8 +380,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 					!strings.HasSuffix(en.convOkuri.String(), "っ") &&
 					!strings.HasSuffix(en.convOkuri.String(), "ッ") {
 					if en.lineMode {
-						en.lineBuffer.WriteString(en.convCand)
-						en.lineBuffer.WriteString(en.convOkuri.String())
+						en.lineBuilder.WriteString(en.convCand)
+						en.lineBuilder.WriteString(en.convOkuri.String())
 					} else {
 						output.WriteString(en.convCand)
 						output.WriteString(en.convOkuri.String())
@@ -380,8 +391,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				}
 			} else {
 				if en.lineMode {
-					en.lineBuffer.WriteString(en.convCand)
-					en.lineBuffer.WriteString(en.convOkuri.String())
+					en.lineBuilder.WriteString(en.convCand)
+					en.lineBuilder.WriteString(en.convOkuri.String())
 				} else {
 					output.WriteString(en.convCand)
 					output.WriteString(en.convOkuri.String())
@@ -419,7 +430,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			update := en.kanaBuilder.Len() > 0
 			en.kanaBuilder.Reset()
 			if en.lineMode {
-				en.lineBuffer.WriteString(kigou)
+				en.lineBuilder.WriteString(kigou)
 				update = true
 			} else {
 				output.WriteString(kigou)
@@ -436,7 +447,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			}
 
 			if en.lineMode {
-				en.lineBuffer.WriteRune(r)
+				en.lineBuilder.WriteRune(r)
 				update = true
 			} else {
 				output.WriteRune(r)
@@ -535,7 +546,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		if en.convMode == convNone {
 			if kana != "" {
 				if en.lineMode {
-					en.lineBuffer.WriteString(kana)
+					en.lineBuilder.WriteString(kana)
 				} else {
 					output.WriteString(kana)
 				}
@@ -598,42 +609,54 @@ func (en *Engine) Status() string {
 	if en.message != "" {
 		m := en.message
 		en.message = ""
-		return m
+		return "SKK: " + m
 	}
 
-	var mark string
+	s := new(strings.Builder)
+	s.WriteRune('(')
 	switch en.inputMode {
+	case inputASCII:
+		s.WriteString("SKK")
 	case inputHira:
-		mark = "かな"
+		s.WriteString("かな")
 	case inputKata:
-		mark = "カナ"
+		s.WriteString("カナ")
 	case inputZen:
-		mark = "全英"
+		s.WriteString("全英")
 	default: // inputASCII
-		mark = "SKK"
+		panic("Status: invalid inputMode == " + string(en.inputMode))
+	}
+	s.WriteRune(')')
+
+	if en.lineMode {
+		s.WriteString(en.lineBuilder.String())
+		s.WriteRune(':')
 	}
 
-	head := ""
 	if en.convMode != convNone {
 		if len(en.convCand) > 0 {
-			head = "▼" + en.convCand
+			s.WriteRune('▼')
+			s.WriteString(en.convCand)
 		} else {
-			head = "▽" + en.convBuilder.String()
+			s.WriteRune('▽')
+			s.WriteString(en.convBuilder.String())
 		}
 	}
 
-	var buf string
 	if len(en.convOkuri.String()) > 0 {
-		buf = en.convOkuri.String()
+		s.WriteString(en.convOkuri.String())
 	} else {
-		buf = en.kanaBuilder.String()
+		s.WriteString(en.kanaBuilder.String())
 	}
 
-	if en.lineMode {
-		return fmt.Sprintf(
-			"(%s)%s:%s%s", mark, en.lineBuffer.String(), head, buf,
-		)
-	} else {
-		return fmt.Sprintf("(%s)%s%s", mark, head, buf)
+	if len(en.convCand) > 0 {
+		k := len(en.convList) - en.convIndex - 1
+		p := "+"
+		if k < 1 {
+			p = ""
+		}
+		s.WriteString(fmt.Sprintf("  [残り %d%s]", k, p))
 	}
+
+	return s.String()
 }
