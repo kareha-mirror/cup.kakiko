@@ -1,5 +1,9 @@
 package romaji
 
+import (
+	"strings"
+)
+
 var ToKigou = map[string]string{
 	",":  "、",
 	"-":  "ー",
@@ -12,7 +16,7 @@ var ToKigou = map[string]string{
 	"?":  "？",
 }
 
-var ToHiragana = map[string]string{
+var ToHira = map[string]string{
 	// あ
 	"a": "あ",
 	"i": "い",
@@ -221,7 +225,7 @@ var ToHiragana = map[string]string{
 	"xvo": "ゔょ",
 }
 
-var ToKatakana = map[string]string{
+var ToKata = map[string]string{
 	// ア
 	"a": "ア",
 	"i": "イ",
@@ -514,7 +518,7 @@ var IsN = map[string]bool{
 	"nj": true,
 }
 
-var HankakuToZenkaku = map[string]string{ // wide alphabet
+var ToZen = map[string]string{ // wide alphabet
 	// lower letters
 	"a": "ａ",
 	"b": "ｂ",
@@ -614,4 +618,18 @@ var HankakuToZenkaku = map[string]string{ // wide alphabet
 	"7": "７",
 	"8": "８",
 	"9": "９",
+}
+
+func HanToZen(s string) string {
+	buf := new(strings.Builder)
+
+	for _, r := range s {
+		h, ok := ToZen[string(r)]
+		if ok {
+			buf.WriteString(h)
+		} else {
+			buf.WriteRune(r)
+		}
+	}
+	return buf.String()
 }
