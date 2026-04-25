@@ -71,6 +71,20 @@ func NewEngine(path string) *Engine {
 	return en
 }
 
+var candKeys = []rune{'a', 's', 'd', 'f', 'j', 'k', 'l'}
+
+func (en *Engine) getCandIndex(r rune) int {
+	if en.convIndex < 4 {
+		return -1
+	}
+	for i := 0; i < len(candKeys) && en.convIndex+i < len(en.convList); i++ {
+		if r == candKeys[i] {
+			return en.convIndex + i
+		}
+	}
+	return -1
+}
+
 var vowels = map[string]string{
 	"あ": "a",
 	"い": "i",
@@ -130,6 +144,24 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			} else {
 				output.WriteString(out)
 			}
+		}
+
+		if en.convIndex >= 4 && r != ' ' && r != 'x' {
+			index := en.getCandIndex(r)
+			if index < 0 {
+				//en.message = fmt.Sprintf("\"%c\" is not valid here!", r)
+				return output.String(), true
+			}
+
+			en.convCand = en.convList[index]
+			semicolon := strings.Index(en.convCand, ";")
+			if semicolon >= 0 {
+				en.convCand = en.convCand[:semicolon]
+			}
+
+			flush()
+			en.resetConv()
+			return output.String(), true
 		}
 
 		// Ctrl-G
@@ -319,9 +351,15 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 					en.hasConvList = true
 				}
 			} else {
-				en.convIndex++
-				if en.convIndex >= len(en.convList) {
-					en.convIndex = max(len(en.convList)-1, 0)
+				if en.convIndex < 4 {
+					en.convIndex++
+					if en.convIndex >= len(en.convList) {
+						en.convIndex = max(len(en.convList)-1, 0)
+					}
+				} else {
+					if en.convIndex+len(candKeys) < len(en.convList) {
+						en.convIndex += len(candKeys)
+					}
 				}
 			}
 			if en.convIndex < len(en.convList) {
@@ -337,7 +375,11 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		}
 
 		if r == 'x' && en.hasConvList {
-			en.convIndex--
+			if en.convIndex > 4 {
+				en.convIndex -= len(candKeys)
+			} else {
+				en.convIndex--
+			}
 			if en.convIndex < 0 {
 				en.hasConvList = false
 				en.convList = []string{}
@@ -622,6 +664,32 @@ func (en *Engine) Status() string {
 		return "SKK: " + m
 	}
 
+	if en.convIndex >= 4 {
+		s := new(strings.Builder)
+
+		for i := 0; i < len(candKeys) && en.convIndex+i < len(en.convList); i++ {
+			s.WriteRune(candKeys[i] + 'A' - 'a')
+			s.WriteRune(':')
+
+			cand := en.convList[en.convIndex+i]
+			semicolon := strings.Index(cand, ";")
+			if semicolon >= 0 {
+				cand = cand[:semicolon]
+			}
+
+			s.WriteString(cand)
+			s.WriteString("  ")
+		}
+
+		k := len(en.convList) - en.convIndex - len(candKeys)
+		if k < 1 {
+			k = 0
+		}
+		s.WriteString(fmt.Sprintf("[残り %d]", k))
+
+		return s.String()
+	}
+
 	s := new(strings.Builder)
 	s.WriteRune('(')
 	switch en.inputMode {
@@ -672,15 +740,6 @@ func (en *Engine) Status() string {
 			s.WriteRune('*')
 		}
 		s.WriteString(en.kanaBuilder.String())
-	}
-
-	if len(en.convCand) > 0 {
-		k := len(en.convList) - en.convIndex - 1
-		p := "+"
-		if k < 1 {
-			p = ""
-		}
-		s.WriteString(fmt.Sprintf("  [残り %d%s]", k, p))
 	}
 
 	return s.String()
