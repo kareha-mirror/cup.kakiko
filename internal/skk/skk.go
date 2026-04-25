@@ -501,6 +501,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		en.kanaBuilder.WriteRune(r)
 
 		var kana string
+		sokuon := false
 		if _, ok := romaji.IsSokuon[en.kanaBuilder.String()]; ok {
 			if en.inputMode == inputHira {
 				kana = "っ"
@@ -511,6 +512,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				kana = ""
 			}
 			en.kanaBuilder.RemoveHead()
+			sokuon = true
 		} else if _, ok := romaji.IsN[en.kanaBuilder.String()]; ok {
 			if en.inputMode == inputHira {
 				kana = "ん"
@@ -572,6 +574,14 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				en.convBuilder.WriteRune(r)
 			}
 
+			if en.convOkuri.Len() < 1 {
+				return output.String(), true
+			}
+
+			if sokuon {
+				return output.String(), true
+			}
+
 			body := en.convBuilder.String()
 			body = romaji.KataToHira(body)
 			okuri := en.convOkuri.String()
@@ -594,7 +604,6 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 					en.convCand = ""
 				}
 			}
-
 			return output.String(), true
 		} else {
 			panic("Process: invalid convMode == " + string(en.convMode))
@@ -639,13 +648,28 @@ func (en *Engine) Status() string {
 			s.WriteString(en.convCand)
 		} else {
 			s.WriteRune('▽')
-			s.WriteString(en.convBuilder.String())
+			if en.convMode == convOkuri {
+				s.WriteString(
+					en.convBuilder.Substring(0, en.convBuilder.Len()-1),
+				)
+			} else {
+				s.WriteString(en.convBuilder.String())
+			}
 		}
 	}
 
+	star := false
 	if len(en.convOkuri.String()) > 0 {
+		if en.convCand == "" {
+			s.WriteRune('*')
+			star = true
+		}
 		s.WriteString(en.convOkuri.String())
-	} else {
+	}
+	if en.kanaBuilder.Len() > 0 {
+		if en.convMode == convOkuri && !star {
+			s.WriteRune('*')
+		}
 		s.WriteString(en.kanaBuilder.String())
 	}
 
