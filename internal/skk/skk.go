@@ -85,6 +85,15 @@ func (en *Engine) getCandIndex(r rune) int {
 	return -1
 }
 
+func (en *Engine) getCand(index int) string {
+	cand := en.convList[index]
+	semicolon := strings.Index(cand, ";")
+	if semicolon < 0 {
+		return cand
+	}
+	return cand[:semicolon]
+}
+
 var vowels = map[string]string{
 	"あ": "a",
 	"い": "i",
@@ -146,24 +155,6 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			}
 		}
 
-		if en.convIndex >= 4 && r != ' ' && r != 'x' {
-			index := en.getCandIndex(r)
-			if index < 0 {
-				//en.message = fmt.Sprintf("\"%c\" is not valid here!", r)
-				return output.String(), true
-			}
-
-			en.convCand = en.convList[index]
-			semicolon := strings.Index(en.convCand, ";")
-			if semicolon >= 0 {
-				en.convCand = en.convCand[:semicolon]
-			}
-
-			flush()
-			en.resetConv()
-			return output.String(), true
-		}
-
 		// Ctrl-G
 		if r == '\a' {
 			if en.convMode == convNone {
@@ -190,6 +181,19 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 					return output.String(), true
 				}
 			}
+		}
+
+		if en.convIndex >= 4 && r != ' ' && r != 'x' {
+			index := en.getCandIndex(r)
+			if index < 0 {
+				//en.message = fmt.Sprintf("\"%c\" is not valid here!", r)
+				return output.String(), true
+			}
+			en.convCand = en.getCand(index)
+
+			flush()
+			en.resetConv()
+			return output.String(), true
 		}
 
 		// Ctrl-L
@@ -363,11 +367,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				}
 			}
 			if en.convIndex < len(en.convList) {
-				en.convCand = en.convList[en.convIndex]
-				semicolon := strings.Index(en.convCand, ";")
-				if semicolon >= 0 {
-					en.convCand = en.convCand[:semicolon]
-				}
+				en.convCand = en.getCand(en.convIndex)
 			} else {
 				en.convCand = ""
 			}
@@ -386,14 +386,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				en.convIndex = 0
 				en.convCand = ""
 				en.convOkuri.Reset()
-			} else {
-				if en.convIndex < len(en.convList) {
-					en.convCand = en.convList[en.convIndex]
-					semicolon := strings.Index(en.convCand, ";")
-					if semicolon >= 0 {
-						en.convCand = en.convCand[:semicolon]
-					}
-				}
+			} else if en.convIndex < len(en.convList) {
+				en.convCand = en.getCand(en.convIndex)
 			}
 			return output.String(), true
 		}
@@ -637,11 +631,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				en.convCand = ""
 			} else {
 				if en.convIndex < len(en.convList) {
-					en.convCand = en.convList[en.convIndex]
-					semicolon := strings.Index(en.convCand, ";")
-					if semicolon >= 0 {
-						en.convCand = en.convCand[:semicolon]
-					}
+					en.convCand = en.getCand(en.convIndex)
 					en.hasConvList = true
 				} else {
 					en.convCand = ""
@@ -667,24 +657,20 @@ func (en *Engine) Status() string {
 	if en.convIndex >= 4 {
 		s := new(strings.Builder)
 
-		for i := 0; i < len(candKeys) && en.convIndex+i < len(en.convList); i++ {
+		for i := 0; i < len(candKeys); i++ {
+			if en.convIndex+i >= len(en.convList) {
+				break
+			}
+
 			s.WriteRune(candKeys[i] + 'A' - 'a')
 			s.WriteRune(':')
 
-			cand := en.convList[en.convIndex+i]
-			semicolon := strings.Index(cand, ";")
-			if semicolon >= 0 {
-				cand = cand[:semicolon]
-			}
-
+			cand := en.getCand(en.convIndex + i)
 			s.WriteString(cand)
 			s.WriteString("  ")
 		}
 
-		k := len(en.convList) - en.convIndex - len(candKeys)
-		if k < 1 {
-			k = 0
-		}
+		k := max(len(en.convList)-en.convIndex-len(candKeys), 0)
 		s.WriteString(fmt.Sprintf("[残り %d]", k))
 
 		return s.String()
@@ -693,7 +679,7 @@ func (en *Engine) Status() string {
 	s := new(strings.Builder)
 	s.WriteRune('(')
 	switch en.inputMode {
-	case inputASCII:
+	default: //case inputASCII:
 		s.WriteString("SKK")
 	case inputHira:
 		s.WriteString("かな")
@@ -701,8 +687,6 @@ func (en *Engine) Status() string {
 		s.WriteString("カナ")
 	case inputZen:
 		s.WriteString("全英")
-	default: // inputASCII
-		panic("Status: invalid inputMode == " + string(en.inputMode))
 	}
 	s.WriteRune(')')
 
@@ -717,30 +701,21 @@ func (en *Engine) Status() string {
 			s.WriteString(en.convCand)
 		} else {
 			s.WriteRune('▽')
+			var body string
 			if en.convMode == convOkuri {
-				s.WriteString(
-					en.convBuilder.Substring(0, en.convBuilder.Len()-1),
-				)
+				body = en.convBuilder.Substring(0, en.convBuilder.Len()-1)
 			} else {
-				s.WriteString(en.convBuilder.String())
+				body = en.convBuilder.String()
 			}
+			s.WriteString(body)
 		}
 	}
 
-	star := false
-	if len(en.convOkuri.String()) > 0 {
-		if en.convCand == "" {
-			s.WriteRune('*')
-			star = true
-		}
-		s.WriteString(en.convOkuri.String())
+	if en.convMode == convOkuri && en.kanaBuilder.Len() > 0 {
+		s.WriteRune('*')
 	}
-	if en.kanaBuilder.Len() > 0 {
-		if en.convMode == convOkuri && !star {
-			s.WriteRune('*')
-		}
-		s.WriteString(en.kanaBuilder.String())
-	}
+	s.WriteString(en.convOkuri.String())
+	s.WriteString(en.kanaBuilder.String())
 
 	return s.String()
 }
