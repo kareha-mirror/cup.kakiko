@@ -95,7 +95,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		r := key.Rune
 
 		if r == termi.RuneBackspace || r == termi.RuneDelete {
-			if en.kanaBuilder.RemoveTail() {
+			if en.kanaBuilder.Len() > 0 {
+				en.kanaBuilder.Reset()
 				return "", true
 			} else if en.convOkuri.RemoveTail() {
 				return "", true
