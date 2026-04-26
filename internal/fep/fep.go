@@ -13,7 +13,7 @@ import (
 
 type Engine interface {
 	Process(key termi.Key) (string, bool)
-	Status() string
+	Status() (string, bool)
 }
 
 const bufferSize = 1024
@@ -129,9 +129,15 @@ func (f *FEP) drawStatus() {
 	termi.HideCursor()
 	termi.MoveCursor(0, h-1)
 
-	status := f.en.Status()
+	status, inv := f.en.Status()
+	if inv {
+		termi.EnableInvert()
+	}
 	termi.Print(status)
 	termi.ClearTail()
+	if inv {
+		termi.DisableInvert()
+	}
 
 	termi.MoveCursor(w-2, h-1)
 	if f.esc {

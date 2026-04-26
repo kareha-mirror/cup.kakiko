@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/colinmarc/cdb v0.0.0-20190223170904-60f317823f70
 	github.com/creack/pty v1.1.24
-	tea.kareha.org/cup/termi v0.0.0-20260425065555-356e61e7a0db
+	tea.kareha.org/cup/termi v0.0.0-20260426093905-a69d605877d4
 )
 
 require (
