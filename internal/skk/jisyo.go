@@ -11,6 +11,12 @@ type Jisyo interface {
 	LookupOkuri(key, okuriKana string) ([]string, error)
 }
 
+type UserJisyo interface {
+	Jisyo
+	Add(reading, gokan string)
+	AddOkuri(key, okuriKana, gokan string)
+}
+
 // \\ \/ \; \[ \] \n \t \" \' \u{...}
 func unescape(s string) string {
 	buf := strings.Builder{}

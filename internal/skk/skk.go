@@ -29,6 +29,7 @@ const (
 
 type convState struct {
 	mode  convMode
+	out   termi.RuneBuf
 	gokan termi.RuneBuf
 	cands []string
 	index int
@@ -39,6 +40,7 @@ type convState struct {
 func newConvState() *convState {
 	return &convState{
 		mode:  convNone,
+		out:   termi.RuneBuf{},
 		gokan: termi.RuneBuf{},
 		cands: []string{},
 		index: 0,
@@ -49,6 +51,7 @@ func newConvState() *convState {
 
 func (conv *convState) reset() {
 	conv.mode = convNone
+	conv.out.Reset()
 	conv.gokan.Reset()
 	conv.cands = []string{}
 	conv.index = 0
@@ -85,7 +88,7 @@ func (conv *convState) candByIndex(index int) string {
 }
 
 type Engine struct {
-	j Jisyo
+	j Jisyos
 
 	inputMode inputMode
 	inputBuf  termi.RuneBuf
@@ -103,8 +106,11 @@ type Engine struct {
 }
 
 func NewEngine(path string) *Engine {
+	j := Jisyos{}
+	j.SetUserJisyo(NewMemUserJisyo())
+	j.AddJisyo(NewCDBJisyo(path))
 	en := &Engine{
-		j: NewCDBJisyo(path),
+		j: j,
 
 		inputMode: inputASCII,
 		inputBuf:  termi.RuneBuf{},
@@ -136,10 +142,6 @@ func (en *Engine) popConv() bool {
 	en.conv = en.convStack[n-1]
 	en.convStack = en.convStack[:n-1]
 	return n > 1
-}
-
-func (en *Engine) register(gokan, word string) {
-	// TODO
 }
 
 var vowels = map[string]string{
@@ -197,13 +199,17 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			return "", true
 		}
 		if en.regMode {
-			if !en.regBuf.RemoveTail() {
-				en.inputBuf.Reset()
-				if !en.popConv() {
-					en.regMode = false
-				}
+			if en.regBuf.RemoveTail() {
 				return "", true
 			}
+			if en.conv.out.RemoveTail() {
+				return "", true
+			}
+			en.inputBuf.Reset()
+			if !en.popConv() {
+				en.regMode = false
+			}
+			return "", true
 		}
 		if en.lineMode && en.lineBuf.RemoveTail() {
 			return "", true
@@ -215,7 +221,9 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 
 	flush := func() {
 		s := strings.Builder{}
-		if en.conv.cand != "" {
+		if en.conv.out.Len() > 0 {
+			s.WriteString(en.conv.out.String())
+		} else if en.conv.cand != "" {
 			s.WriteString(en.conv.cand)
 		} else {
 			s.WriteString(en.conv.gokan.String())
@@ -232,7 +240,15 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 
 	if r == '\a' { // Ctrl-G
 		if en.regMode {
-			en.inputBuf.Reset()
+			if en.inputBuf.Len() > 0 {
+				en.inputBuf.Reset()
+				return output.String(), true
+			}
+			if en.regBuf.Len() > 0 || en.conv.out.Len() > 0 {
+				en.regBuf.Reset()
+				en.conv.out.Reset()
+				return output.String(), true
+			}
 			if !en.popConv() {
 				en.regMode = false
 			}
@@ -348,9 +364,18 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			regWord := en.regBuf.String()
 			en.regBuf.Reset()
 
-			en.register(en.conv.gokan.String(), regWord)
+			if en.conv.mode == convOkuri {
+				en.j.AddOkuri(
+					en.conv.gokan.String(), en.conv.okuri.String(), regWord,
+				)
+			} else {
+				en.j.Add(en.conv.gokan.String(), regWord)
+			}
 
-			en.conv.cand = regWord
+			en.conv.out.WriteString(regWord)
+			en.conv.gokan.Reset()
+			en.conv.okuri.Reset()
+			en.conv.mode = convNone
 			if en.regMode {
 				return output.String(), true
 			}
@@ -446,9 +471,18 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			regWord := en.regBuf.String()
 			en.regBuf.Reset()
 
-			en.register(en.conv.gokan.String(), regWord)
+			if en.conv.mode == convOkuri {
+				en.j.AddOkuri(
+					en.conv.gokan.String(), en.conv.okuri.String(), regWord,
+				)
+			} else {
+				en.j.Add(en.conv.gokan.String(), regWord)
+			}
 
-			en.conv.cand = regWord
+			en.conv.out.WriteString(regWord)
+			en.conv.gokan.Reset()
+			en.conv.okuri.Reset()
+			en.conv.mode = convNone
 			if en.regMode {
 				return output.String(), true
 			}
@@ -872,11 +906,12 @@ func (en *Engine) Status() (string, bool) {
 	}
 
 	if en.regMode {
+		s.WriteString("[登録]")
 		conv := en.convStack[len(en.convStack)-1]
 		s.WriteString(conv.gokan.String())
 		s.WriteRune(' ')
+		s.WriteString(en.conv.out.String())
 		s.WriteString(en.regBuf.String())
-		s.WriteRune(':')
 	}
 
 	if en.conv.mode != convNone {
