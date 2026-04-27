@@ -27,21 +27,76 @@ const (
 	convAbbrev
 )
 
+type convState struct {
+	mode  convMode
+	gokan termi.RuneBuf
+	cands []string
+	index int
+	cand  string
+	okuri termi.RuneBuf
+}
+
+func newConvState() *convState {
+	return &convState{
+		mode:  convNone,
+		gokan: termi.RuneBuf{},
+		cands: []string{},
+		index: 0,
+		cand:  "",
+		okuri: termi.RuneBuf{},
+	}
+}
+
+func (conv *convState) reset() {
+	conv.mode = convNone
+	conv.gokan.Reset()
+	conv.cands = []string{}
+	conv.index = 0
+	conv.cand = ""
+	conv.okuri.Reset()
+}
+
+const candOffset = 4
+
+var candKeys = []rune{'a', 's', 'd', 'f', 'j', 'k', 'l'}
+
+func (conv *convState) keyToIndex(r rune) int {
+	if conv.index < candOffset {
+		return -1
+	}
+	for i := 0; i < len(candKeys); i++ {
+		if conv.index+i >= len(conv.cands) {
+			break
+		}
+		if r == candKeys[i] {
+			return conv.index + i
+		}
+	}
+	return -1
+}
+
+func (conv *convState) candByIndex(index int) string {
+	cand := conv.cands[index]
+	semicolon := strings.Index(cand, ";")
+	if semicolon < 0 {
+		return cand
+	}
+	return cand[:semicolon]
+}
+
 type Engine struct {
 	j Jisyo
 
-	inputMode   inputMode
-	inputBuf    *termi.RuneBuf
-	convMode    convMode
-	convBuf     *termi.RuneBuf
-	hasCandList bool
-	candList    []string
-	candIndex   int
-	cand        string
-	okuriBuf    *termi.RuneBuf
+	inputMode inputMode
+	inputBuf  termi.RuneBuf
+
+	conv      *convState
+	convStack []*convState
+	regMode   bool
+	regBuf    termi.RuneBuf
 
 	lineMode bool
-	lineBuf  *termi.RuneBuf
+	lineBuf  termi.RuneBuf
 	linePass bool
 
 	message string
@@ -51,18 +106,15 @@ func NewEngine(path string) *Engine {
 	en := &Engine{
 		j: NewCDBJisyo(path),
 
-		inputMode:   inputASCII,
-		inputBuf:    new(termi.RuneBuf),
-		convMode:    convNone,
-		convBuf:     new(termi.RuneBuf),
-		hasCandList: false,
-		candList:    []string{},
-		candIndex:   0,
-		cand:        "",
-		okuriBuf:    new(termi.RuneBuf),
+		inputMode: inputASCII,
+		inputBuf:  termi.RuneBuf{},
+		conv:      newConvState(),
+		convStack: []*convState{},
+		regMode:   false,
+		regBuf:    termi.RuneBuf{},
 
 		lineMode: false,
-		lineBuf:  new(termi.RuneBuf),
+		lineBuf:  termi.RuneBuf{},
 		linePass: false,
 
 		message: "",
@@ -71,37 +123,23 @@ func NewEngine(path string) *Engine {
 	return en
 }
 
-const candOffset = 4
-
-var candKeys = []rune{'a', 's', 'd', 'f', 'j', 'k', 'l'}
-
-func (en *Engine) keyToCandIndex(r rune) int {
-	if en.candIndex < candOffset {
-		return -1
-	}
-	for i := 0; i < len(candKeys); i++ {
-		if en.candIndex+i >= len(en.candList) {
-			break
-		}
-		if r == candKeys[i] {
-			return en.candIndex + i
-		}
-	}
-	return -1
+func (en *Engine) pushConv() {
+	en.convStack = append(en.convStack, en.conv)
+	en.conv = newConvState()
 }
 
-func (en *Engine) candByIndex(index int) string {
-	if index < 0 || index >= len(en.candList) { // XXX guard
-		en.message = "Program Error"
-		return "(Program Error)"
+func (en *Engine) popConv() bool {
+	n := len(en.convStack)
+	if n < 1 {
+		return false
 	}
+	en.conv = en.convStack[n-1]
+	en.convStack = en.convStack[:n-1]
+	return n > 1
+}
 
-	cand := en.candList[index]
-	semicolon := strings.Index(cand, ";")
-	if semicolon < 0 {
-		return cand
-	}
-	return cand[:semicolon]
+func (en *Engine) register(gokan, word string) {
+	// TODO
 }
 
 var vowels = map[string]string{
@@ -112,14 +150,21 @@ var vowels = map[string]string{
 	"お": "o",
 }
 
-func (en *Engine) resetConv() {
-	en.convMode = convNone
-	en.convBuf.Reset()
-	en.hasCandList = false
-	en.candList = []string{}
-	en.candIndex = 0
-	en.cand = ""
-	en.okuriBuf.Reset()
+func vowelOf(kana string) (string, bool) {
+	switch kana {
+	case "あ":
+		return "a", true
+	case "い":
+		return "i", true
+	case "う":
+		return "u", true
+	case "え":
+		return "e", true
+	case "お":
+		return "o", true
+	default:
+		return "", false
+	}
 }
 
 func (en *Engine) Process(key termi.Key) (string, bool) {
@@ -139,18 +184,26 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			en.inputBuf.Reset()
 			return "", true
 		}
-		if en.okuriBuf.RemoveTail() {
+		if en.conv.okuri.RemoveTail() {
 			return "", true
 		}
-		if en.convMode != convNone && en.convBuf.RemoveTail() {
-			if en.convBuf.Len() < 1 {
-				en.convMode = convNone
+		if en.conv.mode != convNone && en.conv.gokan.RemoveTail() {
+			if en.conv.gokan.Len() < 1 {
+				en.conv.mode = convNone
 			}
-			en.hasCandList = false
-			en.candList = []string{}
-			en.candIndex = 0
-			en.cand = ""
+			en.conv.cands = []string{}
+			en.conv.index = 0
+			en.conv.cand = ""
 			return "", true
+		}
+		if en.regMode {
+			if !en.regBuf.RemoveTail() {
+				en.inputBuf.Reset()
+				if !en.popConv() {
+					en.regMode = false
+				}
+				return "", true
+			}
 		}
 		if en.lineMode && en.lineBuf.RemoveTail() {
 			return "", true
@@ -158,17 +211,19 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		return string(r), false
 	}
 
-	output := new(strings.Builder)
+	output := strings.Builder{}
 
 	flush := func() {
-		s := new(strings.Builder)
-		if en.cand != "" {
-			s.WriteString(en.cand)
+		s := strings.Builder{}
+		if en.conv.cand != "" {
+			s.WriteString(en.conv.cand)
 		} else {
-			s.WriteString(en.convBuf.String())
+			s.WriteString(en.conv.gokan.String())
 		}
-		s.WriteString(en.okuriBuf.String())
-		if en.lineMode {
+		s.WriteString(en.conv.okuri.String())
+		if en.regMode {
+			en.regBuf.WriteString(s.String())
+		} else if en.lineMode {
 			en.lineBuf.WriteString(s.String())
 		} else {
 			output.WriteString(s.String())
@@ -176,44 +231,51 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	}
 
 	if r == '\a' { // Ctrl-G
-		switch en.convMode {
+		if en.regMode {
+			en.inputBuf.Reset()
+			if !en.popConv() {
+				en.regMode = false
+			}
+			return output.String(), true
+		}
+
+		switch en.conv.mode {
 		case convNone:
 			if en.inputBuf.Len() > 0 {
 				en.inputBuf.Reset()
 				return output.String(), true
 			}
-			// not return
+			output.WriteRune(r)
+			return output.String(), false
 		case convOkuri:
 			en.inputBuf.Reset()
-			if en.cand == "" {
-				en.resetConv()
+			if en.conv.cand == "" {
+				en.conv.reset()
 			} else {
-				en.convBuf.RemoveTail()
-				en.convBuf.WriteString(en.okuriBuf.String())
-				en.okuriBuf.Reset()
-				en.hasCandList = false
-				en.candList = []string{}
-				en.candIndex = 0
-				en.cand = ""
-				en.convMode = convGokan
+				en.conv.gokan.RemoveTail()
+				en.conv.gokan.WriteString(en.conv.okuri.String())
+				en.conv.okuri.Reset()
+				en.conv.cands = []string{}
+				en.conv.index = 0
+				en.conv.cand = ""
+				en.conv.mode = convGokan
 			}
 			return output.String(), true
 		case convGokan, convAbbrev:
 			en.inputBuf.Reset()
-			if en.cand == "" {
-				en.resetConv()
+			if en.conv.cand == "" {
+				en.conv.reset()
 			} else {
-				en.hasCandList = false
-				en.candList = []string{}
-				en.candIndex = 0
-				en.cand = ""
+				en.conv.cands = []string{}
+				en.conv.index = 0
+				en.conv.cand = ""
 			}
 			return output.String(), true
 		}
 	}
 
-	if en.candIndex >= candOffset && r != ' ' && r != 'x' {
-		index := en.keyToCandIndex(r)
+	if en.conv.index >= candOffset && r != ' ' && r != 'x' {
+		index := en.conv.keyToIndex(r)
 		if index < 0 {
 			en.message = fmt.Sprintf(
 				//"\"%c\" is not valid here!", r,
@@ -221,14 +283,19 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			)
 			return output.String(), true
 		}
-		en.cand = en.candByIndex(index)
+		en.conv.cand = en.conv.candByIndex(index)
 
 		flush()
-		en.resetConv()
+		en.conv.reset()
 		return output.String(), true
 	}
 
 	if r == '\f' { // Ctrl-L
+		if en.regMode {
+			output.WriteRune(r)
+			return output.String(), true
+		}
+
 		if en.linePass {
 			en.linePass = false
 			output.WriteRune(r)
@@ -250,13 +317,13 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	en.linePass = false
 
 	if r == '\n' { // Ctrl-J
-		if en.convMode == convAbbrev {
-			output.WriteString(romaji.HanToZen(en.convBuf.String()))
-			en.resetConv()
+		if en.conv.mode == convAbbrev {
+			output.WriteString(romaji.HanToZen(en.conv.gokan.String()))
+			en.conv.reset()
 			return output.String(), true
 		}
 
-		if en.convMode != convNone {
+		if en.conv.mode != convNone {
 			flush()
 		}
 
@@ -264,12 +331,35 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			en.inputMode = inputHira
 		}
 
-		en.resetConv()
+		en.conv.reset()
 
 		return output.String(), true
 	}
 
-	if r == termi.RuneEnter && en.convMode == convNone {
+	if r == termi.RuneEnter && en.conv.mode == convNone {
+		reg := false
+		if en.regMode {
+			flush()
+			en.inputBuf.Reset()
+			if !en.popConv() {
+				en.regMode = false
+			}
+
+			regWord := en.regBuf.String()
+			en.regBuf.Reset()
+
+			en.register(en.conv.gokan.String(), regWord)
+
+			en.conv.cand = regWord
+			if en.regMode {
+				return output.String(), true
+			}
+
+			flush()
+			en.conv.reset()
+			reg = true
+		}
+
 		if en.lineMode {
 			if en.lineBuf.Len() > 0 {
 				output.WriteString(en.lineBuf.String())
@@ -279,15 +369,20 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			}
 			return output.String(), true
 		} else {
-			output.WriteRune(r)
-			return output.String(), false
+			if !reg {
+				output.WriteRune(r)
+			}
+			return output.String(), reg
 		}
 	}
 
 	if en.inputMode == inputZen {
 		zen, ok := romaji.ToZen[string(r)]
 		if ok {
-			if en.lineMode {
+			if en.regMode {
+				en.regBuf.WriteString(zen)
+				return output.String(), true
+			} else if en.lineMode {
 				en.lineBuf.WriteString(zen)
 				return output.String(), true
 			} else {
@@ -295,7 +390,10 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				return output.String(), false
 			}
 		} else {
-			if en.lineMode {
+			if en.regMode {
+				en.regBuf.WriteRune(r)
+				return output.String(), true
+			} else if en.lineMode {
 				en.lineBuf.WriteRune(r)
 				return output.String(), true
 			} else {
@@ -306,7 +404,10 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	}
 
 	if en.inputMode == inputASCII {
-		if en.lineMode {
+		if en.regMode {
+			en.regBuf.WriteRune(r)
+			return output.String(), true
+		} else if en.lineMode {
 			en.lineBuf.WriteRune(r)
 			return output.String(), true
 		} else {
@@ -326,17 +427,35 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		en.inputMode = inputZen
 		en.inputBuf.Reset()
 
-		if en.convMode != convNone {
+		if en.conv.mode != convNone {
 			flush()
-			en.resetConv()
+			en.conv.reset()
 		}
 
 		return output.String(), true
 	}
 
-	if r == termi.RuneEnter && en.convMode != convNone {
+	if r == termi.RuneEnter && en.conv.mode != convNone {
+		if en.regMode {
+			flush()
+			en.inputBuf.Reset()
+			if !en.popConv() {
+				en.regMode = false
+			}
+
+			regWord := en.regBuf.String()
+			en.regBuf.Reset()
+
+			en.register(en.conv.gokan.String(), regWord)
+
+			en.conv.cand = regWord
+			if en.regMode {
+				return output.String(), true
+			}
+		}
+
 		flush()
-		en.resetConv()
+		en.conv.reset()
 		return output.String(), true
 	}
 
@@ -344,10 +463,12 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		en.inputMode = inputASCII
 		en.inputBuf.Reset()
 
-		if en.convMode != convNone {
+		if en.conv.mode != convNone {
 			flush()
-			en.resetConv()
+			en.conv.reset()
 		}
+
+		// XXX regMode?
 
 		if en.lineMode {
 			output.WriteString(en.lineBuf.String())
@@ -364,121 +485,132 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		return output.String(), false
 	}
 
-	if r == ' ' && en.convMode != convNone {
-		if !en.hasCandList {
+	if r == ' ' && en.conv.mode != convNone {
+		if len(en.conv.cands) < 1 {
 			if en.inputBuf.String() == "n" {
 				if en.inputMode == inputHira {
-					en.convBuf.WriteString("ん")
+					en.conv.gokan.WriteString("ん")
 				} else { // inputKata
-					en.convBuf.WriteString("ン")
+					en.conv.gokan.WriteString("ン")
 				}
-				en.inputBuf.Reset()
 			}
+			en.inputBuf.Reset()
 
-			gokan := en.convBuf.String()
+			gokan := en.conv.gokan.String()
 			gokan = romaji.KataToHira(gokan)
 			var err error
-			if en.convMode == convOkuri {
-				okuri := en.okuriBuf.String()
+			if en.conv.mode == convOkuri {
+				okuri := en.conv.okuri.String()
 				okuri = romaji.KataToHira(okuri)
-				en.candList, err = en.j.LookupOkuri(gokan, okuri)
+				en.conv.cands, err = en.j.LookupOkuri(gokan, okuri)
 			} else {
-				en.candList, err = en.j.Lookup(gokan)
+				en.conv.cands, err = en.j.Lookup(gokan)
 			}
-			en.candIndex = 0
+			en.conv.index = 0
 			if err != nil {
 				en.message = fmt.Sprintf("%v", err)
-				en.hasCandList = false
-			} else {
-				if len(en.candList) < 1 {
-					// XXX
-					en.message = "候補なし"
-					return output.String(), true
-				}
-				en.hasCandList = true
+				en.conv.cands = []string{}
+			} else if len(en.conv.cands) < 1 {
+				en.regMode = true
+				en.pushConv()
+				return output.String(), true
 			}
 		} else {
-			if en.candIndex < candOffset {
-				if en.candIndex+1 < len(en.candList) {
-					en.candIndex++
+			if en.conv.index < candOffset {
+				if en.conv.index+1 < len(en.conv.cands) {
+					en.conv.index++
+				} else {
+					en.regMode = true
+					en.pushConv()
+					return output.String(), true
 				}
 			} else {
-				if en.candIndex+len(candKeys) < len(en.candList) {
-					en.candIndex += len(candKeys)
+				if en.conv.index+len(candKeys) < len(en.conv.cands) {
+					en.conv.index += len(candKeys)
+				} else {
+					en.regMode = true
+					en.pushConv()
+					return output.String(), true
 				}
 			}
 		}
-		if en.candIndex < len(en.candList) {
-			en.cand = en.candByIndex(en.candIndex)
+		if en.conv.index < len(en.conv.cands) {
+			en.conv.cand = en.conv.candByIndex(en.conv.index)
 		} else {
-			en.cand = ""
+			en.conv.cand = ""
 		}
 		return output.String(), true
 	}
 
-	if r == 'x' && en.hasCandList {
-		if en.candIndex > candOffset {
-			en.candIndex -= len(candKeys)
+	if r == 'x' && len(en.conv.cands) > 0 {
+		if en.conv.index > candOffset {
+			en.conv.index -= len(candKeys)
 		} else {
-			en.candIndex--
+			en.conv.index--
 		}
-		if en.candIndex < 0 {
-			en.hasCandList = false
-			en.candList = []string{}
-			en.candIndex = 0
-			en.cand = ""
-			en.okuriBuf.Reset()
-		} else if en.candIndex < len(en.candList) {
-			en.cand = en.candByIndex(en.candIndex)
+		if en.conv.index < 0 {
+			en.conv.cands = []string{}
+			en.conv.index = 0
+			en.conv.cand = ""
+			en.conv.okuri.Reset()
+		} else if en.conv.index < len(en.conv.cands) {
+			en.conv.cand = en.conv.candByIndex(en.conv.index)
 		}
 		return output.String(), true
 	}
 
 	if r == '/' {
-		if en.hasCandList {
+		if len(en.conv.cands) > 0 {
 			flush()
-			en.resetConv()
+			en.conv.reset()
 		}
-		en.convMode = convAbbrev
+		en.conv.mode = convAbbrev
 		return output.String(), true
 	}
 
-	if en.convMode == convAbbrev {
-		if en.hasCandList {
+	if en.conv.mode == convAbbrev {
+		if len(en.conv.cands) > 0 {
 			flush()
-			en.resetConv()
+			en.conv.reset()
 		} else {
-			en.convBuf.WriteRune(r)
+			en.conv.gokan.WriteRune(r)
 			return output.String(), true
 		}
 	}
 
 	update := false
-	if en.cand != "" {
-		if en.convMode == convOkuri {
-			if en.okuriBuf.Len() > 0 &&
-				!strings.HasSuffix(en.okuriBuf.String(), "っ") &&
-				!strings.HasSuffix(en.okuriBuf.String(), "ッ") {
-				if en.lineMode {
-					en.lineBuf.WriteString(en.cand)
-					en.lineBuf.WriteString(en.okuriBuf.String())
+	if en.conv.cand != "" {
+		if en.conv.mode == convOkuri {
+			okuri := en.conv.okuri.String()
+			if en.conv.okuri.Len() > 0 &&
+				!strings.HasSuffix(okuri, "っ") &&
+				!strings.HasSuffix(okuri, "ッ") {
+				if en.regMode {
+					en.regBuf.WriteString(en.conv.cand)
+					en.regBuf.WriteString(okuri)
+				} else if en.lineMode {
+					en.lineBuf.WriteString(en.conv.cand)
+					en.lineBuf.WriteString(okuri)
 				} else {
-					output.WriteString(en.cand)
-					output.WriteString(en.okuriBuf.String())
+					output.WriteString(en.conv.cand)
+					output.WriteString(okuri)
 				}
-				en.resetConv()
+				en.conv.reset()
 				en.inputBuf.Reset()
 				update = true
 			}
 		} else {
-			if en.lineMode {
-				en.lineBuf.WriteString(en.cand)
-				en.lineBuf.WriteString(en.okuriBuf.String())
+			if en.regMode {
+				en.regBuf.WriteString(en.conv.cand)
+				en.regBuf.WriteString(en.conv.okuri.String())
+			} else if en.lineMode {
+				en.lineBuf.WriteString(en.conv.cand)
+				en.lineBuf.WriteString(en.conv.okuri.String())
 			} else {
-				output.WriteString(en.cand)
-				output.WriteString(en.okuriBuf.String())
+				output.WriteString(en.conv.cand)
+				output.WriteString(en.conv.okuri.String())
 			}
-			en.resetConv()
+			en.conv.reset()
 			update = true
 		}
 	}
@@ -486,32 +618,35 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	if r >= 'A' && r <= 'Z' {
 		if en.inputBuf.String() == "n" {
 			if en.inputMode == inputHira {
-				en.convBuf.WriteString("ん")
+				en.conv.gokan.WriteString("ん")
 			} else { // inputKata
-				en.convBuf.WriteString("ン")
+				en.conv.gokan.WriteString("ン")
 			}
 			en.inputBuf.Reset()
 		}
-		if en.convMode == convNone {
-			en.convMode = convGokan
-		} else if en.convMode == convGokan {
-			en.convMode = convOkuri
+		if en.conv.mode == convNone {
+			en.conv.mode = convGokan
+		} else if en.conv.mode == convGokan {
+			en.conv.mode = convOkuri
 		}
 		r += 'a' - 'A'
 	}
 
 	kigou, ok := romaji.ToKigou[string(r)]
 	if ok {
-		if en.convMode != convNone && kigou == "ー" {
-			if !en.hasCandList {
-				en.convBuf.WriteString(kigou)
+		if en.conv.mode != convNone && kigou == "ー" {
+			if len(en.conv.cands) < 1 {
+				en.conv.gokan.WriteString(kigou)
 				return output.String(), true
 			}
 		}
 
 		update = update || en.inputBuf.Len() > 0
 		en.inputBuf.Reset()
-		if en.lineMode {
+		if en.regMode {
+			en.regBuf.WriteString(kigou)
+			update = true
+		} else if en.lineMode {
 			en.lineBuf.WriteString(kigou)
 			update = true
 		} else {
@@ -521,13 +656,16 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	}
 
 	if r < 'a' || r > 'z' {
-		if en.convMode != convNone {
+		if en.conv.mode != convNone {
 			flush()
-			en.resetConv()
+			en.conv.reset()
 			update = true
 		}
 
-		if en.lineMode {
+		if en.regMode {
+			en.regBuf.WriteRune(r)
+			update = true
+		} else if en.lineMode {
 			en.lineBuf.WriteRune(r)
 			update = true
 		} else {
@@ -540,35 +678,46 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		en.inputMode = inputASCII
 		en.inputBuf.Reset()
 
-		if en.convMode != convNone {
+		if en.conv.mode != convNone {
 			flush()
-			en.resetConv()
+			en.conv.reset()
 		}
 
 		return output.String(), true
 	}
 
 	if r == 'q' {
-		if en.convMode == convNone {
+		if en.conv.mode == convNone {
 			if en.inputMode == inputHira {
 				en.inputMode = inputKata
 			} else { // inputKata
 				en.inputMode = inputHira
 			}
 			return output.String(), true
-		} else if en.convMode == convGokan {
+		} else if en.conv.mode == convGokan {
+			if en.inputBuf.String() == "n" {
+				if en.inputMode == inputHira {
+					en.conv.gokan.WriteString("ん")
+				} else { // inputKata
+					en.conv.gokan.WriteString("ン")
+				}
+			}
+			en.inputBuf.Reset()
+
+			en.conv.mode = convNone
+			var s string
 			if en.inputMode == inputHira {
-				kata := romaji.HiraToKata(en.convBuf.String())
-				en.hasCandList = false
-				en.candList = []string{kata}
-				en.candIndex = 0
-				en.cand = kata
+				s = romaji.HiraToKata(en.conv.gokan.String())
 			} else { // inputKata
-				hira := romaji.KataToHira(en.convBuf.String())
-				en.hasCandList = false
-				en.candList = []string{hira}
-				en.candIndex = 0
-				en.cand = hira
+				s = romaji.KataToHira(en.conv.gokan.String())
+			}
+			en.conv.gokan.Reset()
+			if en.regMode {
+				en.regBuf.WriteString(s)
+			} else if en.lineMode {
+				en.lineBuf.WriteString(s)
+			} else {
+				output.WriteString(s)
 			}
 			return output.String(), true
 		}
@@ -612,36 +761,37 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		}
 	}
 
-	if en.convMode == convNone {
+	if en.conv.mode == convNone {
 		if kana != "" {
-			if en.lineMode {
+			if en.regMode {
+				en.regBuf.WriteString(kana)
+			} else if en.lineMode {
 				en.lineBuf.WriteString(kana)
 			} else {
 				output.WriteString(kana)
 			}
 		}
 		return output.String(), true
-	} else if en.convMode == convGokan {
+	} else if en.conv.mode == convGokan {
 		if kana != "" {
-			en.convBuf.WriteString(kana)
-			en.hasCandList = false
-			en.candList = []string{}
-			en.candIndex = 0
-			en.cand = ""
+			en.conv.gokan.WriteString(kana)
+			en.conv.cands = []string{}
+			en.conv.index = 0
+			en.conv.cand = ""
 		}
 		return output.String(), true
-	} else if en.convMode == convOkuri {
-		vowel, ok := vowels[kana]
+	} else if en.conv.mode == convOkuri {
+		vowel, ok := vowelOf(kana)
 		if ok {
-			en.convBuf.WriteString(vowel)
-			en.okuriBuf.WriteString(kana)
+			en.conv.gokan.WriteString(vowel)
+			en.conv.okuri.WriteString(kana)
 		} else if kana != "" {
-			en.okuriBuf.WriteString(kana)
+			en.conv.okuri.WriteString(kana)
 		} else {
-			en.convBuf.WriteRune(r)
+			en.conv.gokan.WriteRune(r)
 		}
 
-		if en.okuriBuf.Len() < 1 {
+		if en.conv.okuri.Len() < 1 {
 			return output.String(), true
 		}
 
@@ -649,59 +799,58 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			return output.String(), true
 		}
 
-		gokan := en.convBuf.String()
+		gokan := en.conv.gokan.String()
 		gokan = romaji.KataToHira(gokan)
-		okuri := en.okuriBuf.String()
+		okuri := en.conv.okuri.String()
 		okuri = romaji.KataToHira(okuri)
 		var err error
-		en.candList, err = en.j.LookupOkuri(gokan, okuri)
-		en.candIndex = 0
+		en.conv.cands, err = en.j.LookupOkuri(gokan, okuri)
+		en.conv.index = 0
 		if err != nil {
 			en.message = fmt.Sprintf("%v", err)
-			en.cand = ""
+			en.conv.cand = ""
 		} else {
-			if en.candIndex < len(en.candList) {
-				en.cand = en.candByIndex(en.candIndex)
-				en.hasCandList = true
+			if en.conv.index < len(en.conv.cands) {
+				en.conv.cand = en.conv.candByIndex(en.conv.index)
 			} else {
-				en.cand = ""
+				en.conv.cand = ""
 			}
 		}
 		return output.String(), true
 	} else {
-		en.message = "Process: invalid convMode == " + string(en.convMode)
+		en.message = "Process: invalid conv.mode == " + string(en.conv.mode)
 		return output.String(), false
 	}
 }
 
 func (en *Engine) Status() (string, bool) {
 	if en.message != "" {
-		return "SKK: " + en.message, true
+		return en.message, true
 	}
 
-	if en.candIndex >= candOffset {
-		s := new(strings.Builder)
+	if en.conv.index >= candOffset {
+		s := strings.Builder{}
 
 		for i := 0; i < len(candKeys); i++ {
-			if en.candIndex+i >= len(en.candList) {
+			if en.conv.index+i >= len(en.conv.cands) {
 				break
 			}
 
 			s.WriteRune(candKeys[i] + 'A' - 'a')
 			s.WriteRune(':')
 
-			cand := en.candByIndex(en.candIndex + i)
+			cand := en.conv.candByIndex(en.conv.index + i)
 			s.WriteString(cand)
 			s.WriteString("  ")
 		}
 
-		k := max(len(en.candList)-en.candIndex-len(candKeys), 0)
+		k := max(len(en.conv.cands)-en.conv.index-len(candKeys), 0)
 		s.WriteString(fmt.Sprintf("[残り %d]", k))
 
 		return s.String(), false
 	}
 
-	s := new(strings.Builder)
+	s := strings.Builder{}
 	s.WriteRune('(')
 	switch en.inputMode {
 	case inputASCII:
@@ -722,30 +871,38 @@ func (en *Engine) Status() (string, bool) {
 		s.WriteRune(':')
 	}
 
-	if en.convMode != convNone {
-		if len(en.cand) > 0 {
+	if en.regMode {
+		conv := en.convStack[len(en.convStack)-1]
+		s.WriteString(conv.gokan.String())
+		s.WriteRune(' ')
+		s.WriteString(en.regBuf.String())
+		s.WriteRune(':')
+	}
+
+	if en.conv.mode != convNone {
+		if len(en.conv.cand) > 0 {
 			s.WriteRune('▼')
-			s.WriteString(en.cand)
+			s.WriteString(en.conv.cand)
 		} else {
 			s.WriteRune('▽')
 			var gokan string
-			if en.convMode == convOkuri {
-				if en.convBuf.Len() < 1 {
+			if en.conv.mode == convOkuri {
+				if en.conv.gokan.Len() < 1 {
 					gokan = ""
 				} else {
-					gokan = en.convBuf.Substring(0, en.convBuf.Len()-1)
+					gokan = en.conv.gokan.Substring(0, en.conv.gokan.Len()-1)
 				}
 			} else {
-				gokan = en.convBuf.String()
+				gokan = en.conv.gokan.String()
 			}
 			s.WriteString(gokan)
 		}
 	}
 
-	if en.convMode == convOkuri && en.inputBuf.Len() > 0 {
+	if en.conv.mode == convOkuri && en.inputBuf.Len() > 0 {
 		s.WriteRune('*')
 	}
-	s.WriteString(en.okuriBuf.String())
+	s.WriteString(en.conv.okuri.String())
 	s.WriteString(en.inputBuf.String())
 
 	return s.String(), false

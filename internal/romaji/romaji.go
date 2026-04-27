@@ -621,7 +621,7 @@ var ToZen = map[string]string{ // wide alphabet
 }
 
 func HanToZen(s string) string {
-	buf := new(strings.Builder)
+	buf := strings.Builder{}
 
 	for _, r := range s {
 		h, ok := ToZen[string(r)]

@@ -13,7 +13,7 @@ type Jisyo interface {
 
 // \\ \/ \; \[ \] \n \t \" \' \u{...}
 func unescape(s string) string {
-	buf := new(strings.Builder)
+	buf := strings.Builder{}
 	for i := 0; i < len(s); {
 		r, size := utf8.DecodeRuneInString(s[i:])
 		i += size
@@ -68,7 +68,7 @@ func unescape(s string) string {
 
 func splitSemicolon(s string) []string {
 	fields := make([]string, 0)
-	buf := new(strings.Builder)
+	buf := strings.Builder{}
 	esc := false
 	for _, r := range s {
 		if esc {
@@ -109,9 +109,9 @@ func parseBody(line string) ([]string, map[string][]string) {
 
 	defaultsRaw := make([]string, 0)
 	blocksRaw := make([]string, 0)
-	buf := new(strings.Builder)
+	buf := strings.Builder{}
 	inBr := false
-	brBuf := new(strings.Builder)
+	brBuf := strings.Builder{}
 	esc := false
 
 	flushDefault := func() {
@@ -182,7 +182,7 @@ func parseBody(line string) ([]string, map[string][]string) {
 			rest := br[pos+1:]
 
 			toks := make([]string, 0)
-			bbuf := new(strings.Builder)
+			bbuf := strings.Builder{}
 			esc2 := false
 			for _, r := range rest {
 				if esc2 {

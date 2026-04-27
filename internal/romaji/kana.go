@@ -121,7 +121,7 @@ func init() {
 }
 
 func HiraToKata(s string) string {
-	buf := new(strings.Builder)
+	buf := strings.Builder{}
 
 	for _, r := range s {
 		k, ok := hiraToKata[string(r)]
@@ -135,7 +135,7 @@ func HiraToKata(s string) string {
 }
 
 func KataToHira(s string) string {
-	buf := new(strings.Builder)
+	buf := strings.Builder{}
 
 	for _, r := range s {
 		h, ok := kataToHira[string(r)]
