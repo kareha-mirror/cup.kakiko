@@ -91,9 +91,11 @@ func (en *Engine) keyToCandIndex(r rune) int {
 }
 
 func (en *Engine) candByIndex(index int) string {
-	if index < 0 || index >= len(en.candList) { // guard
+	if index < 0 || index >= len(en.candList) { // XXX guard
+		en.message = "Program Error"
 		return "(Program Error)"
 	}
+
 	cand := en.candList[index]
 	semicolon := strings.Index(cand, ";")
 	if semicolon < 0 {
@@ -310,6 +312,11 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	}
 
 	// now in Hiragana or Katakana mode
+	// assert
+	if en.inputMode != inputHira && en.inputMode != inputKata {
+		en.message = "invalid inputMode == " + string(en.inputMode)
+		return output.String(), true
+	}
 
 	if r == 'L' {
 		en.inputMode = inputZen
@@ -358,7 +365,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			if en.inputBuf.String() == "n" {
 				if en.inputMode == inputHira {
 					en.convBuf.WriteString("ん")
-				} else if en.inputMode == inputKata {
+				} else { // inputKata
 					en.convBuf.WriteString("ン")
 				}
 				en.inputBuf.Reset()
@@ -380,6 +387,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				en.hasCandList = false
 			} else {
 				if len(en.candList) < 1 {
+					// XXX
 					en.message = "候補なし"
 					return output.String(), true
 				}
@@ -387,9 +395,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			}
 		} else {
 			if en.candIndex < candOffset {
-				en.candIndex++
-				if en.candIndex >= len(en.candList) {
-					en.candIndex = max(len(en.candList)-1, 0)
+				if en.candIndex+1 < len(en.candList) {
+					en.candIndex++
 				}
 			} else {
 				if en.candIndex+len(candKeys) < len(en.candList) {
@@ -442,6 +449,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		}
 	}
 
+	update := false
 	if en.cand != "" {
 		if en.convMode == convOkuri {
 			if en.okuriBuf.Len() > 0 &&
@@ -456,6 +464,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				}
 				en.resetConv()
 				en.inputBuf.Reset()
+				update = true
 			}
 		} else {
 			if en.lineMode {
@@ -466,6 +475,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				output.WriteString(en.okuriBuf.String())
 			}
 			en.resetConv()
+			update = true
 		}
 	}
 
@@ -473,7 +483,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		if en.inputBuf.String() == "n" {
 			if en.inputMode == inputHira {
 				en.convBuf.WriteString("ん")
-			} else if en.inputMode == inputKata {
+			} else { // inputKata
 				en.convBuf.WriteString("ン")
 			}
 			en.inputBuf.Reset()
@@ -495,7 +505,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			}
 		}
 
-		update := en.inputBuf.Len() > 0
+		update = update || en.inputBuf.Len() > 0
 		en.inputBuf.Reset()
 		if en.lineMode {
 			en.lineBuf.WriteString(kigou)
@@ -507,7 +517,6 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	}
 
 	if r < 'a' || r > 'z' {
-		update := false
 		if en.convMode != convNone {
 			flush()
 			en.resetConv()
@@ -539,10 +548,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		if en.convMode == convNone {
 			if en.inputMode == inputHira {
 				en.inputMode = inputKata
-			} else if en.inputMode == inputKata {
+			} else { // inputKata
 				en.inputMode = inputHira
-			} else {
-				panic("q: invalid inputMode == " + string(en.inputMode))
 			}
 			return output.String(), true
 		} else if en.convMode == convGokan {
@@ -552,15 +559,12 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				en.candList = []string{kata}
 				en.candIndex = 0
 				en.cand = kata
-			} else if en.inputMode == inputKata {
+			} else { // inputKata
 				hira := romaji.KataToHira(en.convBuf.String())
 				en.hasCandList = false
 				en.candList = []string{hira}
 				en.candIndex = 0
 				en.cand = hira
-			} else {
-				panic("q (conv): invalid inputMode == " +
-					string(en.inputMode))
 			}
 			return output.String(), true
 		}
@@ -573,22 +577,16 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	if _, ok := romaji.IsSokuon[en.inputBuf.String()]; ok {
 		if en.inputMode == inputHira {
 			kana = "っ"
-		} else if en.inputMode == inputKata {
+		} else { // inputKata
 			kana = "ッ"
-		} else {
-			panic("sokuon: invalid inputMode == " + string(en.inputMode))
-			kana = ""
 		}
 		en.inputBuf.RemoveHead()
 		sokuon = true
 	} else if _, ok := romaji.IsN[en.inputBuf.String()]; ok {
 		if en.inputMode == inputHira {
 			kana = "ん"
-		} else if en.inputMode == inputKata {
+		} else { // inputKata
 			kana = "ン"
-		} else {
-			panic("n: invalid inputMode == " + string(en.inputMode))
-			kana = ""
 		}
 		en.inputBuf.RemoveHead()
 	} else {
@@ -601,11 +599,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		var k string
 		if en.inputMode == inputHira {
 			k, ok = romaji.ToHira[lookup]
-		} else if en.inputMode == inputKata {
+		} else { // inputKata
 			k, ok = romaji.ToKata[lookup]
-		} else {
-			panic("kana: invalid inputMode == " + string(en.inputMode))
-			kana = ""
 		}
 		if ok {
 			kana = k
@@ -670,7 +665,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		}
 		return output.String(), true
 	} else {
-		panic("Process: invalid convMode == " + string(en.convMode))
+		en.message = "Process: invalid convMode == " + string(en.convMode)
 		return output.String(), false
 	}
 }
@@ -731,7 +726,11 @@ func (en *Engine) Status() (string, bool) {
 			s.WriteRune('▽')
 			var gokan string
 			if en.convMode == convOkuri {
-				gokan = en.convBuf.Substring(0, en.convBuf.Len()-1)
+				if en.convBuf.Len() < 1 {
+					gokan = ""
+				} else {
+					gokan = en.convBuf.Substring(0, en.convBuf.Len()-1)
+				}
 			} else {
 				gokan = en.convBuf.String()
 			}
