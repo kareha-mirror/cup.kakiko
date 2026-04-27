@@ -185,26 +185,30 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			// not return
 		case convOkuri:
 			en.inputBuf.Reset()
-			en.convBuf.RemoveTail()
-			en.convBuf.WriteString(en.okuriBuf.String())
-			en.okuriBuf.Reset()
-			en.hasCandList = false
-			en.candList = []string{}
-			en.candIndex = 0
-			en.cand = ""
-			en.convMode = convGokan
-			return output.String(), true
-		case convGokan, convAbbrev:
 			if en.cand == "" {
 				en.resetConv()
-				return output.String(), true
+			} else {
+				en.convBuf.RemoveTail()
+				en.convBuf.WriteString(en.okuriBuf.String())
+				en.okuriBuf.Reset()
+				en.hasCandList = false
+				en.candList = []string{}
+				en.candIndex = 0
+				en.cand = ""
+				en.convMode = convGokan
+			}
+			return output.String(), true
+		case convGokan, convAbbrev:
+			en.inputBuf.Reset()
+			if en.cand == "" {
+				en.resetConv()
 			} else {
 				en.hasCandList = false
 				en.candList = []string{}
 				en.candIndex = 0
 				en.cand = ""
-				return output.String(), true
 			}
+			return output.String(), true
 		}
 	}
 
