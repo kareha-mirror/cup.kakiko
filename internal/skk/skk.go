@@ -174,6 +174,20 @@ func (en *Engine) popConv() bool {
 	return n > 1
 }
 
+func (en *Engine) startReg() {
+	en.regMode = true
+	en.conv.out.WriteString(en.regBuf.String())
+	en.regBuf.Reset()
+	en.pushConv()
+}
+
+func (en *Engine) endReg() {
+	en.inputBuf.Reset()
+	if !en.popConv() {
+		en.regMode = false
+	}
+}
+
 var vowels = map[string]string{
 	"あ": "a",
 	"い": "i",
@@ -233,10 +247,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			if en.conv.out.RemoveTail() {
 				return "", true
 			}
-			en.inputBuf.Reset()
-			if !en.popConv() {
-				en.regMode = false
-			}
+			en.endReg()
 			return "", true
 		}
 		if en.lineMode && en.lineBuf.RemoveTail() {
@@ -252,6 +263,15 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		if en.conv.out.Len() > 0 {
 			s.WriteString(en.conv.out.String())
 		} else if en.conv.hasCands() {
+			if en.conv.okuri.Len() > 0 {
+				en.d.AddOkuri(
+					en.conv.stem.String(),
+					en.conv.okuri.String(),
+					en.conv.cand(),
+				)
+			} else {
+				en.d.Add(en.conv.stem.String(), en.conv.cand())
+			}
 			s.WriteString(en.conv.cand())
 		} else {
 			s.WriteString(en.conv.stem.String())
@@ -277,9 +297,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				en.conv.out.Reset()
 				return output.String(), true
 			}
-			if !en.popConv() {
-				en.regMode = false
-			}
+			en.endReg()
 			return output.String(), true
 		}
 
@@ -379,10 +397,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		reg := false
 		if en.regMode {
 			flush()
-			en.inputBuf.Reset()
-			if !en.popConv() {
-				en.regMode = false
-			}
+			en.endReg()
 
 			regWord := en.regBuf.String()
 			en.regBuf.Reset()
@@ -568,8 +583,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				en.message = fmt.Sprintf("%v", err)
 				en.conv.cands = []string{}
 			} else if !en.conv.hasCands() {
-				en.regMode = true
-				en.pushConv()
+				en.startReg()
 				return output.String(), true
 			}
 		} else {
@@ -577,16 +591,14 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 				if en.conv.index+1 < len(en.conv.cands) {
 					en.conv.index++
 				} else {
-					en.regMode = true
-					en.pushConv()
+					en.startReg()
 					return output.String(), true
 				}
 			} else {
 				if en.conv.index+len(candKeys) < len(en.conv.cands) {
 					en.conv.index += len(candKeys)
 				} else {
-					en.regMode = true
-					en.pushConv()
+					en.startReg()
 					return output.String(), true
 				}
 			}
