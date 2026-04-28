@@ -2,21 +2,22 @@ package skk
 
 import (
 	"fmt"
+	"strings"
 )
 
-type MemUserDic struct {
+type MemDic struct {
 	kanji map[string]string
 	okuri map[string]string
 }
 
-func NewMemUserDic() *MemUserDic {
-	return &MemUserDic{
+func NewMemDic() *MemDic {
+	return &MemDic{
 		kanji: make(map[string]string, 0),
 		okuri: make(map[string]string, 0),
 	}
 }
 
-func (d *MemUserDic) Lookup(reading string) ([]string, error) {
+func (d *MemDic) Lookup(reading string) ([]string, error) {
 	body, ok := d.kanji[reading]
 	if !ok {
 		return []string{}, nil
@@ -25,7 +26,7 @@ func (d *MemUserDic) Lookup(reading string) ([]string, error) {
 	return defaults, nil
 }
 
-func (d *MemUserDic) LookupOkuri(key, okuri string) ([]string, error) {
+func (d *MemDic) LookupOkuri(key, okuri string) ([]string, error) {
 	body, ok := d.okuri[key]
 	if !ok {
 		return []string{}, nil
@@ -40,21 +41,41 @@ func (d *MemUserDic) LookupOkuri(key, okuri string) ([]string, error) {
 	return defaults, nil
 }
 
-func (d *MemUserDic) Add(reading, kanji string) {
-	prev, ok := d.kanji[reading]
-	if ok {
-		d.kanji[reading] = fmt.Sprintf("/%s%s/", kanji, prev)
-	} else {
-		d.kanji[reading] = fmt.Sprintf("/%s/", kanji)
+func removeElem(list []string, elem string) []string {
+	for i, s := range list {
+		if s == elem {
+			n := []string{}
+			n = append(n, list[:i]...)
+			if i+1 < len(list) {
+				n = append(n, list[i+1:]...)
+			}
+			return n
+		}
 	}
+	return list
+}
+
+func (d *MemDic) Add(reading, kanji string) {
+	cands, err := d.Lookup(reading)
+	if err != nil {
+		cands = []string{}
+	}
+	cands = removeElem(cands, kanji)
+
+	n := []string{kanji}
+	n = append(n, cands...)
+	d.kanji[reading] = fmt.Sprintf("/%s/", strings.Join(n, "/"))
 }
 
 // XXX
-func (d *MemUserDic) AddOkuri(key, okuri, kanji string) {
-	prev, ok := d.okuri[key]
-	if ok {
-		d.okuri[key] = fmt.Sprintf("/%s%s", kanji, prev)
-	} else {
-		d.okuri[key] = fmt.Sprintf("/%s/", kanji)
+func (d *MemDic) AddOkuri(key, okuri, kanji string) {
+	cands, err := d.LookupOkuri(key, okuri)
+	if err != nil {
+		cands = []string{}
 	}
+	cands = removeElem(cands, kanji)
+
+	n := []string{kanji}
+	n = append(n, cands...)
+	d.okuri[key] = fmt.Sprintf("/%s/", strings.Join(n, "/"))
 }
