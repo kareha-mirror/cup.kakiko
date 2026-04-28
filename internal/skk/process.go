@@ -459,6 +459,9 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		en.conv.index = 0
 		if err != nil {
 			en.message = fmt.Sprintf("%v", err)
+			en.conv.cands = []string{}
+		} else if !en.conv.hasCands() {
+			en.startReg()
 		}
 		return output.String(), true
 	} else {
