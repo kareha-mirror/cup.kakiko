@@ -1,11 +1,11 @@
 // cdbdic.go - SKK-JISYO-E v1 over CDB backend
 // API:
-//   import "tea.kareha.org/cup/kakiko/internal/skk"
-//   d := skk.NewCDBDic(path)
+//   import "tea.kareha.org/cup/kakiko/internal/skkdic"
+//   d := skkdic.NewCDBDic(path)
 //   d.Lookup(reading)
 //   d.LookupOkuri(key, okuri)
 
-package skk
+package skkdic
 
 import (
 	"github.com/colinmarc/cdb"

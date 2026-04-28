@@ -1,4 +1,4 @@
-package skk
+package skkdic
 
 type Dics struct {
 	ud UserDic
@@ -47,6 +47,14 @@ func (d *Dics) Add(reading, kanji string) {
 
 func (d *Dics) AddOkuri(key, okuri, kanji string) {
 	d.ud.AddOkuri(key, okuri, kanji)
+}
+
+func (d *Dics) Remove(reading, kanji string) {
+	d.ud.Remove(reading, kanji)
+}
+
+func (d *Dics) RemoveOkuri(key, okuri, kanji string) {
+	d.ud.RemoveOkuri(key, okuri, kanji)
 }
 
 func (d *Dics) SetUserDic(ud UserDic) {

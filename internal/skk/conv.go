@@ -15,49 +15,55 @@ const (
 	convAbbrev
 )
 
-type convState struct {
-	mode  convMode
+type conv struct {
+	mode convMode
+
 	out   termi.RuneBuf
 	stem  termi.RuneBuf
 	okuri termi.RuneBuf
+
 	cands []string
 	index int
 }
 
-func newConvState() *convState {
-	return &convState{
-		mode:  convNone,
+func newConv() *conv {
+	return &conv{
+		mode: convNone,
+
 		out:   termi.RuneBuf{},
 		stem:  termi.RuneBuf{},
 		okuri: termi.RuneBuf{},
+
 		cands: []string{},
 		index: 0,
 	}
 }
 
-func (conv *convState) clearCands() {
-	conv.cands = conv.cands[:0]
-	conv.index = 0
+func (c *conv) clearCands() {
+	c.cands = c.cands[:0]
+	c.index = 0
 }
 
-func (conv *convState) reset() {
-	conv.mode = convNone
-	conv.out.Reset()
-	conv.stem.Reset()
-	conv.okuri.Reset()
-	conv.clearCands()
+func (c *conv) reset() {
+	c.mode = convNone
+
+	c.out.Reset()
+	c.stem.Reset()
+	c.okuri.Reset()
+
+	c.clearCands()
 }
 
-func (conv *convState) hasCands() bool {
-	return len(conv.cands) > 0
+func (c *conv) hasCands() bool {
+	return len(c.cands) > 0
 }
 
-func (conv *convState) candByIndex(index int) string {
-	if !conv.hasCands() {
+func (c *conv) candByIndex(index int) string {
+	if !c.hasCands() {
 		return ""
 	}
 
-	cand := conv.cands[index]
+	cand := c.cands[index]
 	semicolon := strings.Index(cand, ";")
 	if semicolon < 0 {
 		return cand
@@ -65,8 +71,8 @@ func (conv *convState) candByIndex(index int) string {
 	return cand[:semicolon]
 }
 
-func (conv *convState) cand() string {
-	return conv.candByIndex(conv.index)
+func (c *conv) cand() string {
+	return c.candByIndex(c.index)
 }
 
 const candOffset = 4
@@ -80,24 +86,24 @@ func init() {
 	}
 }
 
-func (conv *convState) keyToIndex(r rune) int {
-	if conv.index < candOffset {
+func (c *conv) keyToIndex(r rune) int {
+	if c.index < candOffset {
 		return -1
 	}
 	i, ok := candKeys[r]
 	if !ok {
 		return -1
 	}
-	if conv.index+i >= len(conv.cands) {
+	if c.index+i >= len(c.cands) {
 		return -1
 	}
-	return conv.index + i
+	return c.index + i
 }
 
-func (conv *convState) advanceModeOnUpper() {
-	if conv.mode == convNone {
-		conv.mode = convStem
-	} else if conv.mode == convStem {
-		conv.mode = convOkuri
+func (c *conv) advanceMode() {
+	if c.mode == convNone {
+		c.mode = convStem
+	} else if c.mode == convStem {
+		c.mode = convOkuri
 	}
 }

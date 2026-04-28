@@ -12,7 +12,7 @@ func (en *Engine) Status() (string, bool) {
 	}
 
 	// list of candidates
-	if en.conv.index >= candOffset {
+	if en.conv.hasCands() && en.conv.index >= candOffset {
 		s := strings.Builder{}
 
 		for i, r := range candKeyList {
@@ -34,8 +34,9 @@ func (en *Engine) Status() (string, bool) {
 		return s.String(), false
 	}
 
-	// input mode
 	s := strings.Builder{}
+
+	// input mode
 	s.WriteRune('(')
 	switch en.inputMode {
 	case inputASCII:
@@ -51,10 +52,16 @@ func (en *Engine) Status() (string, bool) {
 	}
 	s.WriteRune(')')
 
-	// registration buffer or line buffer
+	// line buffer
+	if en.lineMode && !en.regMode {
+		s.WriteString(en.lineBuf.String())
+		s.WriteRune(':')
+	}
+
+	// registration buffer
 	if en.regMode {
 		s.WriteString("[登録]")
-		conv := en.convStack[len(en.convStack)-1]
+		conv := en.stack[len(en.stack)-1]
 		if conv.mode == convOkuri {
 			stem := ""
 			temp, ok := conv.stem.Substring(0, conv.stem.Len()-1)
@@ -70,9 +77,6 @@ func (en *Engine) Status() (string, bool) {
 		s.WriteRune(' ')
 		s.WriteString(en.conv.out.String())
 		s.WriteString(en.regBuf.String())
-	} else if en.lineMode {
-		s.WriteString(en.lineBuf.String())
-		s.WriteRune(':')
 	}
 
 	// stem
@@ -82,16 +86,14 @@ func (en *Engine) Status() (string, bool) {
 			s.WriteString(en.conv.cand())
 		} else {
 			s.WriteRune('▽')
-			stem := ""
 			if en.conv.mode == convOkuri {
-				temp, ok := en.conv.stem.Substring(0, en.conv.stem.Len()-1)
+				clipped, ok := en.conv.stem.Substring(0, en.conv.stem.Len()-1)
 				if ok {
-					stem = temp
+					s.WriteString(clipped)
 				}
 			} else {
-				stem = en.conv.stem.String()
+				s.WriteString(en.conv.stem.String())
 			}
-			s.WriteString(stem)
 		}
 	}
 

@@ -1,21 +1,10 @@
-package skk
+package skkdic
 
 import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
 )
-
-type Dic interface {
-	Lookup(reading string) ([]string, error)
-	LookupOkuri(key, okuri string) ([]string, error)
-}
-
-type UserDic interface {
-	Dic
-	Add(reading, kanji string)
-	AddOkuri(key, okuri, kanji string)
-}
 
 // \\ \/ \; \[ \] \n \t \" \' \u{...}
 func unescape(s string) string {

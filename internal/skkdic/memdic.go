@@ -1,4 +1,4 @@
-package skk
+package skkdic
 
 import (
 	"fmt"
@@ -78,4 +78,13 @@ func (d *MemDic) AddOkuri(key, okuri, kanji string) {
 	n := []string{kanji}
 	n = append(n, cands...)
 	d.okuri[key] = fmt.Sprintf("/%s/", strings.Join(n, "/"))
+}
+
+func (d *MemDic) Remove(reading, kanji string) {
+	// TODO
+}
+
+// XXX
+func (d *MemDic) RemoveOkuri(key, okuri, kanji string) {
+	// TODO
 }
