@@ -2,6 +2,7 @@ package skk
 
 import (
 	"fmt"
+	"strings"
 
 	"tea.kareha.org/cup/kakiko/internal/romaji"
 )
@@ -77,7 +78,7 @@ func (en *Engine) handleControlCode(r rune) (string, bool) {
 	return en.output(false)
 }
 
-func (en *Engine) handleAbbrevMode() (string, bool) {
+func (en *Engine) enterAbbrevMode() (string, bool) {
 	if en.conv.hasCands() {
 		en.flush()
 		en.conv.reset()
@@ -145,6 +146,28 @@ func (en *Engine) handleConvRev() (string, bool) {
 	return en.output(true)
 }
 
+func (en *Engine) handleKigou(kigou string, update bool) (string, bool) {
+	if en.conv.mode != convNone && kigou == "ー" {
+		if !en.conv.hasCands() {
+			en.conv.stem.WriteString(kigou)
+			return en.output(true)
+		}
+	}
+
+	update = update || en.inputBuf.Len() > 0
+	en.inputBuf.Reset()
+	if en.regMode {
+		en.regBuf.WriteString(kigou)
+		update = true
+	} else if en.lineMode {
+		en.lineBuf.WriteString(kigou)
+		update = true
+	} else {
+		en.out.WriteString(kigou)
+	}
+	return en.output(update)
+}
+
 func (en *Engine) handleNonAlpha(r rune, update bool) (string, bool) {
 	if en.conv.mode != convNone {
 		en.flush()
@@ -164,7 +187,7 @@ func (en *Engine) handleNonAlpha(r rune, update bool) (string, bool) {
 	return en.output(update)
 }
 
-func (en *Engine) handleASCIIMode() (string, bool) {
+func (en *Engine) enterASCIIMode() (string, bool) {
 	en.inputMode = inputASCII
 	en.inputBuf.Reset()
 
@@ -193,9 +216,50 @@ func vowelOf(kana string) (string, bool) {
 	}
 }
 
-func (en *Engine) handleKana(r rune, update bool) (string, bool) {
+func (en *Engine) changeKanaType() (string, bool) {
+	if en.conv.mode == convNone {
+		if en.inputMode == inputHira {
+			en.inputMode = inputKata
+		} else { // inputKata
+			en.inputMode = inputHira
+		}
+		return en.output(true)
+	} else {
+		if en.inputBuf.String() == "n" {
+			if en.inputMode == inputHira {
+				en.conv.stem.WriteString("ん")
+			} else { // inputKata
+				en.conv.stem.WriteString("ン")
+			}
+		}
+		en.inputBuf.Reset()
+
+		en.conv.mode = convNone
+		s := strings.Builder{}
+		if en.inputMode == inputHira {
+			s.WriteString(romaji.HiraToKata(en.conv.stem.String()))
+			s.WriteString(romaji.HiraToKata(en.conv.okuri.String()))
+		} else { // inputKata
+			s.WriteString(romaji.KataToHira(en.conv.stem.String()))
+			s.WriteString(romaji.KataToHira(en.conv.okuri.String()))
+		}
+		en.conv.reset()
+		if en.regMode {
+			en.regBuf.WriteString(s.String())
+		} else if en.lineMode {
+			en.lineBuf.WriteString(s.String())
+		} else {
+			en.out.WriteString(s.String())
+		}
+		return en.output(true)
+	}
+}
+
+func (en *Engine) handleAlpha(r rune, update bool) (string, bool) {
+	en.inputBuf.WriteRune(r)
+
 	var kana string
-	sokuon := false
+	hold := false
 	if _, ok := romaji.IsSokuon[en.inputBuf.String()]; ok {
 		if en.inputMode == inputHira {
 			kana = "っ"
@@ -203,7 +267,7 @@ func (en *Engine) handleKana(r rune, update bool) (string, bool) {
 			kana = "ッ"
 		}
 		en.inputBuf.RemoveHead()
-		sokuon = true
+		hold = true
 	} else if _, ok := romaji.IsN[en.inputBuf.String()]; ok {
 		if en.inputMode == inputHira {
 			kana = "ん"
@@ -211,6 +275,7 @@ func (en *Engine) handleKana(r rune, update bool) (string, bool) {
 			kana = "ン"
 		}
 		en.inputBuf.RemoveHead()
+		hold = true
 	} else {
 		lookup := en.inputBuf.String()
 		alias, ok := romaji.Aliases[lookup]
@@ -262,7 +327,7 @@ func (en *Engine) handleKana(r rune, update bool) (string, bool) {
 			return en.output(true)
 		}
 
-		if sokuon {
+		if hold {
 			return en.output(true)
 		}
 
