@@ -6,15 +6,15 @@ import (
 	"unicode/utf8"
 )
 
-type Jisyo interface {
+type Dic interface {
 	Lookup(reading string) ([]string, error)
-	LookupOkuri(key, okuriKana string) ([]string, error)
+	LookupOkuri(key, okuri string) ([]string, error)
 }
 
-type UserJisyo interface {
-	Jisyo
-	Add(reading, gokan string)
-	AddOkuri(key, okuriKana, gokan string)
+type UserDic interface {
+	Dic
+	Add(reading, kanji string)
+	AddOkuri(key, okuri, kanji string)
 }
 
 // \\ \/ \; \[ \] \n \t \" \' \u{...}

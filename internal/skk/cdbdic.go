@@ -1,9 +1,9 @@
-// jisyo.go - SKK-JISYO-E v1 over CDB backend
+// cdbdic.go - SKK-JISYO-E v1 over CDB backend
 // API:
 //   import "tea.kareha.org/cup/kakiko/internal/skk"
-//   j := skk.NewCDBJisyo(path)
-//   j.Lookup(reading)
-//   j.LookupOkuri(key, okuriKana)
+//   d := skk.NewCDBDic(path)
+//   d.Lookup(reading)
+//   d.LookupOkuri(key, okuri)
 
 package skk
 
@@ -11,31 +11,31 @@ import (
 	"github.com/colinmarc/cdb"
 )
 
-type CDBJisyo struct {
+type CDBDic struct {
 	path     string
 	database *cdb.CDB
 }
 
-func NewCDBJisyo(path string) *CDBJisyo {
-	return &CDBJisyo{
+func NewCDBDic(path string) *CDBDic {
+	return &CDBDic{
 		path:     path,
 		database: nil,
 	}
 }
 
-func (j *CDBJisyo) getDb() (*cdb.CDB, error) {
-	if j.database == nil {
-		db, err := cdb.Open(j.path)
+func (d *CDBDic) getDb() (*cdb.CDB, error) {
+	if d.database == nil {
+		db, err := cdb.Open(d.path)
 		if err != nil {
 			return nil, err
 		}
-		j.database = db
+		d.database = db
 	}
-	return j.database, nil
+	return d.database, nil
 }
 
-func (j *CDBJisyo) Lookup(reading string) ([]string, error) {
-	db, err := j.getDb()
+func (d *CDBDic) Lookup(reading string) ([]string, error) {
+	db, err := d.getDb()
 	if err != nil {
 		return []string{}, err
 	}
@@ -47,8 +47,8 @@ func (j *CDBJisyo) Lookup(reading string) ([]string, error) {
 	return defaults, nil
 }
 
-func (j *CDBJisyo) LookupOkuri(key, okuriKana string) ([]string, error) {
-	db, err := j.getDb()
+func (d *CDBDic) LookupOkuri(key, okuri string) ([]string, error) {
+	db, err := d.getDb()
 	if err != nil {
 		return []string{}, err
 	}
@@ -57,8 +57,8 @@ func (j *CDBJisyo) LookupOkuri(key, okuriKana string) ([]string, error) {
 		return []string{}, err
 	}
 	defaults, blocks := parseBody(string(body))
-	if okuriKana != "" && len(blocks) > 0 {
-		result, ok := blocks[okuriKana]
+	if okuri != "" && len(blocks) > 0 {
+		result, ok := blocks[okuri]
 		if ok && len(result) > 0 {
 			return result, nil
 		}

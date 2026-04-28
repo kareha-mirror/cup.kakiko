@@ -30,7 +30,7 @@ const (
 type convState struct {
 	mode  convMode
 	out   termi.RuneBuf
-	gokan termi.RuneBuf
+	stem  termi.RuneBuf
 	okuri termi.RuneBuf
 	cands []string
 	index int
@@ -43,7 +43,7 @@ func newConvState() *convState {
 	return &convState{
 		mode:  convNone,
 		out:   termi.RuneBuf{},
-		gokan: termi.RuneBuf{},
+		stem:  termi.RuneBuf{},
 		okuri: termi.RuneBuf{},
 		cands: []string{},
 		index: 0,
@@ -63,7 +63,7 @@ func (conv *convState) clearCands() {
 func (conv *convState) reset() {
 	conv.mode = convNone
 	conv.out.Reset()
-	conv.gokan.Reset()
+	conv.stem.Reset()
 	conv.okuri.Reset()
 	conv.clearCands()
 }
@@ -118,7 +118,7 @@ func (conv *convState) keyToIndex(r rune) int {
 }
 
 type Engine struct {
-	j Jisyos
+	d Dics
 
 	inputMode inputMode
 	inputBuf  termi.RuneBuf
@@ -136,11 +136,11 @@ type Engine struct {
 }
 
 func NewEngine(path string) *Engine {
-	j := Jisyos{}
-	j.SetUserJisyo(NewMemUserJisyo())
-	j.AddJisyo(NewCDBJisyo(path))
+	d := Dics{}
+	d.SetUserDic(NewMemUserDic())
+	d.AddDic(NewCDBDic(path))
 	en := &Engine{
-		j: j,
+		d: d,
 
 		inputMode: inputASCII,
 		inputBuf:  termi.RuneBuf{},
@@ -219,8 +219,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		if en.conv.okuri.RemoveTail() {
 			return "", true
 		}
-		if en.conv.mode != convNone && en.conv.gokan.RemoveTail() {
-			if en.conv.gokan.Len() < 1 {
+		if en.conv.mode != convNone && en.conv.stem.RemoveTail() {
+			if en.conv.stem.Len() < 1 {
 				en.conv.mode = convNone
 			}
 			en.conv.clearCands()
@@ -254,7 +254,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		} else if en.conv.hasCands() {
 			s.WriteString(en.conv.cand())
 		} else {
-			s.WriteString(en.conv.gokan.String())
+			s.WriteString(en.conv.stem.String())
 		}
 		s.WriteString(en.conv.okuri.String())
 		if en.regMode {
@@ -296,8 +296,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			if !en.conv.hasCands() {
 				en.conv.reset()
 			} else {
-				en.conv.gokan.RemoveTail()
-				en.conv.gokan.WriteString(en.conv.okuri.String())
+				en.conv.stem.RemoveTail()
+				en.conv.stem.WriteString(en.conv.okuri.String())
 				en.conv.okuri.Reset()
 				en.conv.clearCands()
 				en.conv.mode = convGokan
@@ -357,7 +357,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 
 	if r == '\n' { // Ctrl-J
 		if en.conv.mode == convAbbrev {
-			output.WriteString(romaji.HanToZen(en.conv.gokan.String()))
+			output.WriteString(romaji.HanToZen(en.conv.stem.String()))
 			en.conv.reset()
 			return output.String(), true
 		}
@@ -388,15 +388,15 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			en.regBuf.Reset()
 
 			if en.conv.mode == convOkuri {
-				en.j.AddOkuri(
-					en.conv.gokan.String(), en.conv.okuri.String(), regWord,
+				en.d.AddOkuri(
+					en.conv.stem.String(), en.conv.okuri.String(), regWord,
 				)
 			} else {
-				en.j.Add(en.conv.gokan.String(), regWord)
+				en.d.Add(en.conv.stem.String(), regWord)
 			}
 
 			en.conv.out.WriteString(regWord)
-			en.conv.gokan.Reset()
+			en.conv.stem.Reset()
 			en.conv.okuri.Reset()
 			en.conv.mode = convNone
 			if en.regMode {
@@ -495,15 +495,15 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			en.regBuf.Reset()
 
 			if en.conv.mode == convOkuri {
-				en.j.AddOkuri(
-					en.conv.gokan.String(), en.conv.okuri.String(), regWord,
+				en.d.AddOkuri(
+					en.conv.stem.String(), en.conv.okuri.String(), regWord,
 				)
 			} else {
-				en.j.Add(en.conv.gokan.String(), regWord)
+				en.d.Add(en.conv.stem.String(), regWord)
 			}
 
 			en.conv.out.WriteString(regWord)
-			en.conv.gokan.Reset()
+			en.conv.stem.Reset()
 			en.conv.okuri.Reset()
 			en.conv.mode = convNone
 			if en.regMode {
@@ -546,22 +546,22 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		if !en.conv.hasCands() {
 			if en.inputBuf.String() == "n" {
 				if en.inputMode == inputHira {
-					en.conv.gokan.WriteString("ん")
+					en.conv.stem.WriteString("ん")
 				} else { // inputKata
-					en.conv.gokan.WriteString("ン")
+					en.conv.stem.WriteString("ン")
 				}
 			}
 			en.inputBuf.Reset()
 
-			gokan := en.conv.gokan.String()
-			gokan = romaji.KataToHira(gokan)
+			stem := en.conv.stem.String()
+			stem = romaji.KataToHira(stem)
 			var err error
 			if en.conv.mode == convOkuri {
 				okuri := en.conv.okuri.String()
 				okuri = romaji.KataToHira(okuri)
-				en.conv.cands, err = en.j.LookupOkuri(gokan, okuri)
+				en.conv.cands, err = en.d.LookupOkuri(stem, okuri)
 			} else {
-				en.conv.cands, err = en.j.Lookup(gokan)
+				en.conv.cands, err = en.d.Lookup(stem)
 			}
 			en.conv.index = 0
 			if err != nil {
@@ -621,7 +621,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			flush()
 			en.conv.reset()
 		} else {
-			en.conv.gokan.WriteRune(r)
+			en.conv.stem.WriteRune(r)
 			return output.String(), true
 		}
 	}
@@ -666,9 +666,9 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	if r >= 'A' && r <= 'Z' {
 		if en.inputBuf.String() == "n" {
 			if en.inputMode == inputHira {
-				en.conv.gokan.WriteString("ん")
+				en.conv.stem.WriteString("ん")
 			} else { // inputKata
-				en.conv.gokan.WriteString("ン")
+				en.conv.stem.WriteString("ン")
 			}
 			en.inputBuf.Reset()
 		}
@@ -684,7 +684,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	if ok {
 		if en.conv.mode != convNone && kigou == "ー" {
 			if !en.conv.hasCands() {
-				en.conv.gokan.WriteString(kigou)
+				en.conv.stem.WriteString(kigou)
 				return output.String(), true
 			}
 		}
@@ -745,9 +745,9 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		} else if en.conv.mode == convGokan {
 			if en.inputBuf.String() == "n" {
 				if en.inputMode == inputHira {
-					en.conv.gokan.WriteString("ん")
+					en.conv.stem.WriteString("ん")
 				} else { // inputKata
-					en.conv.gokan.WriteString("ン")
+					en.conv.stem.WriteString("ン")
 				}
 			}
 			en.inputBuf.Reset()
@@ -755,11 +755,11 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			en.conv.mode = convNone
 			var s string
 			if en.inputMode == inputHira {
-				s = romaji.HiraToKata(en.conv.gokan.String())
+				s = romaji.HiraToKata(en.conv.stem.String())
 			} else { // inputKata
-				s = romaji.KataToHira(en.conv.gokan.String())
+				s = romaji.KataToHira(en.conv.stem.String())
 			}
-			en.conv.gokan.Reset()
+			en.conv.stem.Reset()
 			if en.regMode {
 				en.regBuf.WriteString(s)
 			} else if en.lineMode {
@@ -822,19 +822,19 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		return output.String(), true
 	} else if en.conv.mode == convGokan {
 		if kana != "" {
-			en.conv.gokan.WriteString(kana)
+			en.conv.stem.WriteString(kana)
 			en.conv.clearCands()
 		}
 		return output.String(), true
 	} else if en.conv.mode == convOkuri {
 		vowel, ok := vowelOf(kana)
 		if ok {
-			en.conv.gokan.WriteString(vowel)
+			en.conv.stem.WriteString(vowel)
 			en.conv.okuri.WriteString(kana)
 		} else if kana != "" {
 			en.conv.okuri.WriteString(kana)
 		} else {
-			en.conv.gokan.WriteRune(r)
+			en.conv.stem.WriteRune(r)
 		}
 
 		if en.conv.okuri.Len() < 1 {
@@ -845,12 +845,12 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			return output.String(), true
 		}
 
-		gokan := en.conv.gokan.String()
-		gokan = romaji.KataToHira(gokan)
+		stem := en.conv.stem.String()
+		stem = romaji.KataToHira(stem)
 		okuri := en.conv.okuri.String()
 		okuri = romaji.KataToHira(okuri)
 		var err error
-		en.conv.cands, err = en.j.LookupOkuri(gokan, okuri)
+		en.conv.cands, err = en.d.LookupOkuri(stem, okuri)
 		en.conv.index = 0
 		if err != nil {
 			en.message = fmt.Sprintf("%v", err)
@@ -913,7 +913,7 @@ func (en *Engine) Status() (string, bool) {
 	if en.regMode {
 		s.WriteString("[登録]")
 		conv := en.convStack[len(en.convStack)-1]
-		s.WriteString(conv.gokan.String())
+		s.WriteString(conv.stem.String())
 		s.WriteRune(' ')
 		s.WriteString(en.conv.out.String())
 		s.WriteString(en.regBuf.String())
@@ -925,17 +925,17 @@ func (en *Engine) Status() (string, bool) {
 			s.WriteString(en.conv.cand())
 		} else {
 			s.WriteRune('▽')
-			var gokan string
+			var stem string
 			if en.conv.mode == convOkuri {
-				if en.conv.gokan.Len() < 1 {
-					gokan = ""
+				if en.conv.stem.Len() < 1 {
+					stem = ""
 				} else {
-					gokan = en.conv.gokan.Substring(0, en.conv.gokan.Len()-1)
+					stem = en.conv.stem.Substring(0, en.conv.stem.Len()-1)
 				}
 			} else {
-				gokan = en.conv.gokan.String()
+				stem = en.conv.stem.String()
 			}
-			s.WriteString(gokan)
+			s.WriteString(stem)
 		}
 	}
 

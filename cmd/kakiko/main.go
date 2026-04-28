@@ -17,7 +17,7 @@ func fatal(a ...any) {
 	os.Exit(1)
 }
 
-func jisyoPath() (string, error) {
+func dicPath() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -42,7 +42,7 @@ func main() {
 	}
 	var c = exec.Command(command, arguments...)
 
-	path, err := jisyoPath()
+	path, err := dicPath()
 	if err != nil {
 		fatal(err)
 	}
