@@ -2,18 +2,76 @@ package skkdic
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
 type MemDic struct {
+	path string
+
 	kanji map[string]string
 	okuri map[string]string
 }
 
-func NewMemDic() *MemDic {
+type dicRegion int
+
+const (
+	dicNone dicRegion = iota
+	dicOkuri
+	dicStem
+)
+
+func loadUserDic(path string) (map[string]string, map[string]string, error) {
+	kanji := map[string]string{}
+	okuri := map[string]string{}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return kanji, okuri, err
+	}
+
+	lines := strings.Split(string(data), "\n")
+	region := dicNone
+	for _, line := range lines {
+		if strings.HasPrefix(line, ";; okuri-ari entries.") {
+			region = dicOkuri
+			continue
+		}
+		if strings.HasPrefix(line, ";; okuri-nasi entries.") {
+			region = dicStem
+			continue
+		}
+		if region == dicNone {
+			continue
+		}
+		if strings.HasPrefix(line, ";") {
+			continue
+		}
+
+		space := strings.Index(line, " ")
+		if space < 0 {
+			continue
+		}
+		yomi := line[:space]
+		cands := line[space+1:]
+		if region == dicOkuri {
+			okuri[yomi] = cands
+		} else { // dicStem
+			kanji[yomi] = cands
+		}
+	}
+
+	return kanji, okuri, nil
+}
+
+func NewMemDic(path string) *MemDic {
+	kanji, okuri, _ := loadUserDic(path)
+
 	return &MemDic{
-		kanji: make(map[string]string, 0),
-		okuri: make(map[string]string, 0),
+		path: path,
+
+		kanji: kanji,
+		okuri: okuri,
 	}
 }
 

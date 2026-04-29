@@ -17,12 +17,23 @@ func fatal(a ...any) {
 	os.Exit(1)
 }
 
+const appName = "kakiko"
+
 func dicPath() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	path := filepath.Join(dir, "kakiko", "SKK-JISYO.L.cdb")
+	path := filepath.Join(dir, appName, "SKK-JISYO.L.cdb")
+	return path, nil
+}
+
+func userDicPath() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	path := filepath.Join(dir, appName, "skk-jisyo")
 	return path, nil
 }
 
@@ -46,7 +57,11 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	en := skk.NewEngine(path)
+	userPath, err := userDicPath()
+	if err != nil {
+		fatal(err)
+	}
+	en := skk.NewEngine(path, userPath)
 	f := fep.Init(c, en)
 	defer f.Finish()
 	f.Main()
