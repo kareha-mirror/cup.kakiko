@@ -145,7 +145,7 @@ func (en *Engine) handleLineMode(r rune) (string, bool) {
 }
 
 func (en *Engine) handleMeta(r rune) (string, bool) {
-	if en.conv.mode == convAbbrev {
+	if en.conv.mode == convAbbrev && !en.conv.hasCands() {
 		en.out.WriteString(romaji.HanToZen(en.conv.stem.String()))
 		en.conv.reset()
 		return en.output(true)
