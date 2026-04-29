@@ -129,19 +129,27 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 
 	// phase shift operation
 	if r >= 'A' && r <= 'Z' {
-		if en.inputBuf.String() == "n" {
+		// to lower
+		r += 'a' - 'A'
+
+		inp := en.inputBuf.String() + string(r)
+		if _, ok := romaji.IsSokuon[inp]; ok {
+			if en.inputMode == inputHira {
+				en.conv.stem.WriteRune('っ')
+			} else { // inputKata
+				en.conv.stem.WriteRune('ッ')
+			}
+			en.inputBuf.RemoveHead()
+		} else if _, ok := romaji.IsN[inp]; ok {
 			if en.inputMode == inputHira {
 				en.conv.stem.WriteRune('ん')
 			} else { // inputKata
 				en.conv.stem.WriteRune('ン')
 			}
-			en.inputBuf.Reset()
+			en.inputBuf.RemoveHead()
 		}
 
 		en.conv.advanceMode()
-
-		// to lower
-		r += 'a' - 'A'
 	}
 
 	if r < 'a' || r > 'z' {
