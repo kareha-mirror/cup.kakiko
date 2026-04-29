@@ -100,6 +100,16 @@ func (en *Engine) endReg() {
 	}
 }
 
+func (en *Engine) write(s string) {
+	if en.regMode {
+		en.regBuf.WriteString(s)
+	} else if en.lineMode {
+		en.lineBuf.WriteString(s)
+	} else {
+		en.out.WriteString(s)
+	}
+}
+
 func (en *Engine) flush() {
 	s := strings.Builder{}
 
@@ -118,16 +128,19 @@ func (en *Engine) flush() {
 			en.dics.Add(en.conv.stem.String(), en.conv.cand())
 		}
 	} else {
-		s.WriteString(en.conv.stem.String())
+		if en.conv.mode == convOkuri {
+			stem, ok := en.conv.stem.Substring(0, en.conv.stem.Len()-1)
+			if ok {
+				s.WriteString(stem)
+			} else {
+				s.WriteString(en.conv.stem.String())
+			}
+		} else {
+			s.WriteString(en.conv.stem.String())
+		}
 	}
 
 	s.WriteString(en.conv.okuri.String())
 
-	if en.regMode {
-		en.regBuf.WriteString(s.String())
-	} else if en.lineMode {
-		en.lineBuf.WriteString(s.String())
-	} else {
-		en.out.WriteString(s.String())
-	}
+	en.write(s.String())
 }

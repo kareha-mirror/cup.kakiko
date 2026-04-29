@@ -7,7 +7,7 @@ import (
 	"tea.kareha.org/cup/kakiko/internal/romaji"
 )
 
-func (en *Engine) handleZenMode() (string, bool) {
+func (en *Engine) enterZenMode() (string, bool) {
 	en.inputMode = inputZen
 	en.inputBuf.Reset()
 
@@ -19,7 +19,7 @@ func (en *Engine) handleZenMode() (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleKanaEnter() (string, bool) {
+func (en *Engine) handleConvEnter() (string, bool) {
 	if en.regMode {
 		en.flush()
 		en.inputBuf.Reset()
