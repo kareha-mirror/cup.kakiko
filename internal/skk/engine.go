@@ -118,7 +118,7 @@ func (en *Engine) flush() {
 	} else if en.conv.hasCands() {
 		s.WriteString(en.conv.cand())
 
-		if en.conv.okuri.Len() > 0 {
+		if en.conv.mode == convOkuri {
 			en.dics.AddOkuri(
 				en.conv.stem.String(),
 				en.conv.okuri.String(),

@@ -12,7 +12,16 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 		return en.output(true)
 	}
 
-	if en.conv.okuri.RemoveTail() {
+	if en.regMode {
+		if en.regBuf.RemoveTail() {
+			return en.output(true)
+		}
+
+		if en.conv.out.RemoveTail() {
+			return en.output(true)
+		}
+
+		en.message = "Text is read-only"
 		return en.output(true)
 	}
 
@@ -26,6 +35,10 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 			return en.output(true)
 		}
 
+		if en.conv.okuri.RemoveTail() {
+			return en.output(true)
+		}
+
 		if en.conv.stem.RemoveTail() {
 			en.conv.clearCands()
 			return en.output(true)
@@ -34,19 +47,6 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 			en.conv.mode = convNone
 			return en.output(true)
 		}
-	}
-
-	if en.regMode {
-		if en.regBuf.RemoveTail() {
-			return en.output(true)
-		}
-
-		if en.conv.out.RemoveTail() {
-			return en.output(true)
-		}
-
-		en.endReg()
-		return en.output(true)
 	}
 
 	if en.lineMode && en.lineBuf.RemoveTail() {
@@ -58,24 +58,30 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 }
 
 func (en *Engine) handleCancel(r rune) (string, bool) {
-	if en.regMode {
-		if en.inputBuf.Len() > 0 {
-			en.inputBuf.Reset()
-			return en.output(true)
-		}
-
-		if en.regBuf.Len() > 0 || en.conv.out.Len() > 0 {
-			en.regBuf.Reset()
-			en.conv.out.Reset()
-			return en.output(true)
-		}
-
-		en.endReg()
-		return en.output(true)
-	}
-
 	switch en.conv.mode {
 	default: //case convNone:
+		if en.regMode {
+			if en.inputBuf.Len() > 0 {
+				en.inputBuf.Reset()
+				return en.output(true)
+			}
+
+			if en.regBuf.Len() > 0 || en.conv.out.Len() > 0 {
+				en.regBuf.Reset()
+				en.conv.out.Reset()
+				return en.output(true)
+			}
+
+			en.endReg()
+			if en.conv.mode == convOkuri {
+				en.conv.stem.RemoveTail()
+				en.conv.stem.WriteString(en.conv.okuri.String())
+				en.conv.okuri.Reset()
+				en.conv.mode = convStem
+			}
+			return en.output(true)
+		}
+
 		if en.inputBuf.Len() > 0 {
 			en.inputBuf.Reset()
 			return en.output(true)
