@@ -22,14 +22,16 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 			en.conv.out.RemoveTail()
 			en.flush()
 			en.conv.reset()
+			en.conv.mode = convNone
 			return en.output(true)
 		}
 
 		if en.conv.stem.RemoveTail() {
-			if en.conv.stem.Len() < 1 {
-				en.conv.mode = convNone
-			}
 			en.conv.clearCands()
+			return en.output(true)
+		} else {
+			en.conv.reset()
+			en.conv.mode = convNone
 			return en.output(true)
 		}
 	}
@@ -152,6 +154,7 @@ func (en *Engine) handleMeta(r rune) (string, bool) {
 	}
 
 	if en.conv.mode != convNone {
+		en.inputBuf.Reset()
 		en.flush()
 	}
 
