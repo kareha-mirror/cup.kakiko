@@ -27,8 +27,19 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 
 	if en.conv.mode != convNone {
 		if en.conv.hasCands() {
+			if en.conv.mode == convOkuri {
+				en.dics.AddOkuri(
+					en.conv.stem.String(),
+					en.conv.okuri.String(),
+					en.conv.cand(),
+				)
+			} else {
+				en.dics.Add(en.conv.stem.String(), en.conv.cand())
+			}
+
 			en.conv.out.WriteString(en.conv.cand())
 			en.conv.out.RemoveTail()
+			en.conv.okuri.RemoveTail()
 			en.flush()
 			en.conv.reset()
 			en.conv.mode = convNone
