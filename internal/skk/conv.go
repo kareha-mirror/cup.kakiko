@@ -103,7 +103,7 @@ func (c *conv) keyToIndex(r rune) int {
 func (c *conv) advanceMode() {
 	if c.mode == convNone {
 		c.mode = convStem
-	} else if c.mode == convStem {
+	} else if c.mode == convStem && c.stem.Len() > 0 {
 		c.mode = convOkuri
 	}
 }
