@@ -15,5 +15,5 @@ golang.org/x/sys v0.42.0 h1:omrd2nAlyT5ESRdCLYdm3+fMfNFE/+Rf4bDIQImRJeo=
 golang.org/x/sys v0.42.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
 golang.org/x/term v0.41.0 h1:QCgPso/Q3RTJx2Th4bDLqML4W6iJiaXFq2/ftQF13YU=
 golang.org/x/term v0.41.0/go.mod h1:3pfBgksrReYfZ5lvYM0kSO0LIkAl4Yl2bXOkKP7Ec2A=
-tea.kareha.org/cup/termi v0.0.0-20260428060529-106ac3f30a1c h1:lf2fqhV8Z8g/rceIjfu1S/ZkpCrfsyjFXhcCe1sY0ho=
-tea.kareha.org/cup/termi v0.0.0-20260428060529-106ac3f30a1c/go.mod h1:sXymS6HwRZS6gUxfeXjLEN5GYXEbGWVZplA/AOBO8JI=
+tea.kareha.org/cup/termi v0.0.0-20260503065845-6cfa102feba5 h1:5q2teb9/qs+VtcVmP+A7PaV6VSbmGOQszECi1n2Ha7I=
+tea.kareha.org/cup/termi v0.0.0-20260503065845-6cfa102feba5/go.mod h1:sXymS6HwRZS6gUxfeXjLEN5GYXEbGWVZplA/AOBO8JI=

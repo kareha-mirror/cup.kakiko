@@ -129,6 +129,8 @@ func (f *FEP) drawStatus() {
 	termi.HideCursor()
 	termi.MoveCursor(0, h-1)
 
+	termi.DefaultColor()
+
 	status, inv := f.en.Status()
 	if inv {
 		termi.EnableInvert()
@@ -145,6 +147,8 @@ func (f *FEP) drawStatus() {
 	} else {
 		termi.Print(" .")
 	}
+
+	termi.ResetColor()
 
 	termi.ShowCursor()
 	termi.LoadCursor()

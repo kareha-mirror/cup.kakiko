@@ -62,6 +62,20 @@ func sortKeys(m map[string]string) []string {
 	return keys
 }
 
+func sortValue(v string) string {
+	values := strings.Split(v[1:len(v)-1], "/")
+	m := map[string]bool{}
+	for _, value := range values {
+		m[value] = true
+	}
+	keys := []string{}
+	for key := range m {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return "/" + strings.Join(keys, "/") + "/"
+}
+
 func main() {
 	kanji := map[string]string{}
 	okuri := map[string]string{}
@@ -76,7 +90,8 @@ func main() {
 
 	okuriKeys := sortKeys(okuri)
 	for _, key := range okuriKeys {
-		fmt.Printf("%s %s\n", key, okuri[key])
+		value := sortValue(okuri[key])
+		fmt.Printf("%s %s\n", key, value)
 	}
 
 	fmt.Printf("\n")
@@ -84,6 +99,7 @@ func main() {
 
 	kanjiKeys := sortKeys(kanji)
 	for _, key := range kanjiKeys {
-		fmt.Printf("%s %s\n", key, kanji[key])
+		value := sortValue(kanji[key])
+		fmt.Printf("%s %s\n", key, value)
 	}
 }
