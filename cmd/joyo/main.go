@@ -7,6 +7,24 @@ import (
 	"strings"
 )
 
+func isOkuri(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i, r := range s {
+		if i > 0 && i == len(s)-1 {
+			if r >= 'a' || r <= 'z' {
+				return true
+			}
+		} else {
+			if r < 0x3041 || r > 0x3096 {
+				return false
+			}
+		}
+	}
+	return false
+}
+
 func load(
 	path string,
 	kanji map[string]string,
@@ -30,8 +48,7 @@ func load(
 		yomi := line[:space]
 		cands := line[space+1:]
 
-		last := yomi[len(yomi)-1]
-		if last >= 'a' && last <= 'z' {
+		if isOkuri(yomi) {
 			prev, ok := okuri[yomi]
 			if ok {
 				okuri[yomi] = cands + prev[1:]
@@ -62,6 +79,16 @@ func sortKeys(m map[string]string) []string {
 	return keys
 }
 
+func sortKeysReverse(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
+
+	return keys
+}
 func sortValue(v string) string {
 	values := strings.Split(v[1:len(v)-1], "/")
 	m := map[string]bool{}
@@ -88,7 +115,7 @@ func main() {
 
 	fmt.Printf(";; okuri-ari entries.\n")
 
-	okuriKeys := sortKeys(okuri)
+	okuriKeys := sortKeysReverse(okuri)
 	for _, key := range okuriKeys {
 		value := sortValue(okuri[key])
 		fmt.Printf("%s %s\n", key, value)
