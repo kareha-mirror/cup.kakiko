@@ -20,51 +20,25 @@ const (
 	dicStem
 )
 
-func loadUserDic(path string) (map[string]string, error) {
+func NewMemDic(path string) *MemDic {
 	kanji := map[string]string{}
 
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return kanji, err
+	r, err := os.Open(path)
+	if err == nil {
+		_ = Load(r, kanji)
 	}
-
-	lines := strings.Split(string(data), "\n")
-	region := dicNone
-	for _, line := range lines {
-		if strings.HasPrefix(line, ";; okuri-ari entries.") {
-			region = dicOkuri
-			continue
-		}
-		if strings.HasPrefix(line, ";; okuri-nasi entries.") {
-			region = dicStem
-			continue
-		}
-		if region == dicNone {
-			continue
-		}
-		if strings.HasPrefix(line, ";") {
-			continue
-		}
-
-		space := strings.Index(line, " ")
-		if space < 0 {
-			continue
-		}
-		yomi := line[:space]
-		cands := line[space+1:]
-		kanji[yomi] = cands
-	}
-
-	return kanji, nil
-}
-
-func NewMemDic(path string) *MemDic {
-	kanji, _ := loadUserDic(path)
 
 	return &MemDic{
 		path: path,
 
 		kanji: kanji,
+	}
+}
+
+func (d *MemDic) Save() {
+	w, err := os.Create(d.path)
+	if err == nil {
+		Save(w, d.kanji)
 	}
 }
 

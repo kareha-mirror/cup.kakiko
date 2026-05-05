@@ -1,29 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"sort"
 	"strings"
-)
 
-func isOkuri(s string) bool {
-	if s == "" {
-		return false
-	}
-	for i, r := range s {
-		if i > 0 && i == len(s)-1 {
-			if r >= 'a' || r <= 'z' {
-				return true
-			}
-		} else {
-			if r < 0x3041 || r > 0x3096 {
-				return false
-			}
-		}
-	}
-	return false
-}
+	"tea.kareha.org/cup/kakiko/internal/skkdic"
+)
 
 func load(
 	path string,
@@ -48,7 +31,7 @@ func load(
 		yomi := line[:space]
 		cands := line[space+1:]
 
-		if isOkuri(yomi) {
+		if skkdic.HasOkuri(yomi) {
 			prev, ok := okuri[yomi]
 			if ok {
 				okuri[yomi] = cands + prev[1:]
@@ -104,29 +87,19 @@ func sortValue(v string) string {
 }
 
 func main() {
-	kanji := map[string]string{}
-	okuri := map[string]string{}
+	m := map[string]string{}
+
 	for _, path := range os.Args[1:] {
-		err := load(path, kanji, okuri)
+		r, err := os.Open(path)
+		if err != nil {
+			panic(err)
+		}
+
+		err = skkdic.Load(r, m)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	fmt.Printf(";; okuri-ari entries.\n")
-
-	okuriKeys := sortKeysReverse(okuri)
-	for _, key := range okuriKeys {
-		value := sortValue(okuri[key])
-		fmt.Printf("%s %s\n", key, value)
-	}
-
-	fmt.Printf("\n")
-	fmt.Printf(";; okuri-nasi entries.\n")
-
-	kanjiKeys := sortKeys(kanji)
-	for _, key := range kanjiKeys {
-		value := sortValue(kanji[key])
-		fmt.Printf("%s %s\n", key, value)
-	}
+	skkdic.Save(os.Stdout, m)
 }

@@ -14,6 +14,7 @@ import (
 type Engine interface {
 	Process(key termi.Key) (string, bool)
 	Status() (string, bool)
+	Finish()
 }
 
 const bufferSize = 1024
@@ -99,7 +100,6 @@ func Init(c *exec.Cmd, en Engine) *FEP {
 
 	go func() {
 		c.Wait()
-		os.Exit(0)
 	}()
 
 	listener := func(esc bool) {
@@ -113,6 +113,8 @@ func Init(c *exec.Cmd, en Engine) *FEP {
 }
 
 func (f *FEP) Finish() {
+	f.en.Finish()
+
 	termi.RemoveEscapeListener(f.listener)
 
 	termi.ScrollReset()

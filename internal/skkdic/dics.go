@@ -6,21 +6,35 @@ type Dics struct {
 }
 
 func (d *Dics) Lookup(reading string) ([]string, error) {
-	cands := make([]string, 0)
+	total := make([]string, 0)
+	m := map[string]bool{}
 	if d.ud != nil {
-		c, e := d.ud.Lookup(reading)
+		cands, e := d.ud.Lookup(reading)
 		if e == nil {
-			cands = append(cands, c...)
+			for _, c := range cands {
+				_, ok := m[c]
+				if ok {
+					continue
+				}
+				total = append(total, c)
+				m[c] = true
+			}
 		}
 	}
 	for _, dic := range d.d {
-		c, e := dic.Lookup(reading)
-		if e != nil {
-			continue
+		cands, e := dic.Lookup(reading)
+		if e == nil {
+			for _, c := range cands {
+				_, ok := m[c]
+				if ok {
+					continue
+				}
+				total = append(total, c)
+				m[c] = true
+			}
 		}
-		cands = append(cands, c...)
 	}
-	return cands, nil
+	return total, nil
 }
 
 func (d *Dics) Add(reading, kanji string) {
@@ -37,4 +51,8 @@ func (d *Dics) SetUserDic(ud UserDic) {
 
 func (d *Dics) AddDic(dic Dic) {
 	d.d = append(d.d, dic)
+}
+
+func (d *Dics) Save() {
+	d.ud.Save()
 }
