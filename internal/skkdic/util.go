@@ -45,11 +45,11 @@ func indexOfUnescapedSlash(s string) int {
 	return -1
 }
 
-func parseBody(line string) []string {
-	if line == "" {
+func parseSeq(seq string) []string {
+	if seq == "" {
 		return []string{}
 	}
-	line = strings.TrimSpace(line)
+	seq = strings.TrimSpace(seq)
 
 	defaultsRaw := make([]string, 0)
 	blocksRaw := make([]string, 0)
@@ -68,7 +68,7 @@ func parseBody(line string) []string {
 		}
 	}
 
-	for _, r := range line {
+	for _, r := range seq {
 		if esc {
 			if inBr {
 				brBuf.WriteRune(r)

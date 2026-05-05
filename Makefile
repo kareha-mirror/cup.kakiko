@@ -2,10 +2,12 @@ all: build
 
 build:
 	go build -o kakiko ./cmd/kakiko
-	go build -o joyo ./cmd/joyo
+	go build -o skk-edic-merge ./cmd/skk-edic-merge
+	make -C skk-edic
 
 clean:
-	rm -f kakiko joyo
+	make -C skk-edic clean
+	rm -f kakiko skk-edic-merge
 
 run:
 	go run ./cmd/kakiko

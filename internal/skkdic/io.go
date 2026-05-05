@@ -7,17 +7,17 @@ import (
 	"strings"
 )
 
-func HasOkuri(s string) bool {
-	if s == "" {
+func HasOkuri(reading string) bool {
+	if reading == "" {
 		return false
 	}
-	for i, r := range s {
-		if i > 0 && i == len(s)-1 {
-			if r >= 'a' || r <= 'z' {
+	for i, r := range reading {
+		if i > 0 && i == len(reading)-1 {
+			if r >= 'a' && r <= 'z' { // okuri alphabet range
 				return true
 			}
 		} else {
-			if r < 0x3041 || r > 0x3096 {
+			if r < 0x3041 || r > 0x3096 { // normal hiragana range
 				return false
 			}
 		}
@@ -25,7 +25,7 @@ func HasOkuri(s string) bool {
 	return false
 }
 
-func Load(r io.Reader, m map[string]string) error {
+func Load(r io.Reader, table map[string]string) error {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return err
@@ -48,81 +48,96 @@ func Load(r io.Reader, m map[string]string) error {
 			continue
 		}
 		reading := line[:space]
-		cands := line[space+1:]
+		seq := line[space+1:]
 
-		prev, ok := m[reading]
-		if ok {
-			m[reading] = cands + prev[1:]
+		prev, ok := table[reading]
+		if ok && len(prev) > 0 {
+			table[reading] = seq + prev[1:]
 		} else {
-			m[reading] = cands
+			table[reading] = seq
 		}
 	}
 
 	return nil
 }
 
-func sortKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
+func sortedReadings(table map[string]string) []string {
+	readings := make([]string, 0, len(table))
+	for reading := range table {
+		readings = append(readings, reading)
 	}
-
-	sort.Strings(keys)
-
-	return keys
+	sort.Strings(readings)
+	return readings
 }
 
-func sortKeysReverse(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
+func reverseSortedReadings(table map[string]string) []string {
+	readings := make([]string, 0, len(table))
+	for reading := range table {
+		readings = append(readings, reading)
 	}
-
-	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
-
-	return keys
+	sort.Sort(sort.Reverse(sort.StringSlice(readings)))
+	return readings
 }
 
-func sortValue(v string) string {
-	values := strings.Split(v[1:len(v)-1], "/")
+func sortSeq(seq string) string {
+	cands := strings.Split(seq[1:len(seq)-1], "/")
 	m := map[string]bool{}
-	for _, value := range values {
-		m[value] = true
+	for _, cand := range cands {
+		m[cand] = true
 	}
-	keys := []string{}
-	for key := range m {
-		keys = append(keys, key)
+	list := []string{}
+	for c := range m {
+		list = append(list, c)
 	}
-	sort.Strings(keys)
-	return "/" + strings.Join(keys, "/") + "/"
+	sort.Strings(list)
+	return "/" + strings.Join(list, "/") + "/"
 }
 
-func Save(w io.Writer, m map[string]string) {
+func Save(w io.Writer, table map[string]string) error {
 	kanji := map[string]string{}
 	okuri := map[string]string{}
 
-	for reading := range m {
+	for reading := range table {
 		if HasOkuri(reading) {
-			okuri[reading] = m[reading]
+			okuri[reading] = table[reading]
 		} else {
-			kanji[reading] = m[reading]
+			kanji[reading] = table[reading]
 		}
 	}
 
-	fmt.Fprintf(w, ";; okuri-ari entries.\n")
+	var err error
 
-	okuriKeys := sortKeysReverse(okuri)
-	for _, key := range okuriKeys {
-		value := sortValue(okuri[key])
-		fmt.Fprintf(w, "%s %s\n", key, value)
+	_, err = fmt.Fprintf(w, ";; okuri-ari entries.\n")
+	if err != nil {
+		return err
 	}
 
-	fmt.Fprintf(w, "\n")
-	fmt.Fprintf(w, ";; okuri-nasi entries.\n")
-
-	kanjiKeys := sortKeys(kanji)
-	for _, key := range kanjiKeys {
-		value := sortValue(kanji[key])
-		fmt.Fprintf(w, "%s %s\n", key, value)
+	okuriReadings := reverseSortedReadings(okuri)
+	for _, reading := range okuriReadings {
+		seq := sortSeq(okuri[reading])
+		_, err = fmt.Fprintf(w, "%s %s\n", reading, seq)
+		if err != nil {
+			return err
+		}
 	}
+
+	_, err = fmt.Fprintf(w, "\n")
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(w, ";; okuri-nasi entries.\n")
+	if err != nil {
+		return err
+	}
+
+	kanjiReadings := sortedReadings(kanji)
+	for _, reading := range kanjiReadings {
+		seq := sortSeq(kanji[reading])
+		_, err = fmt.Fprintf(w, "%s %s\n", reading, seq)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

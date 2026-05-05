@@ -7,48 +7,68 @@ import (
 )
 
 type MemDic struct {
-	path string
-
-	kanji map[string]string
+	path   string
+	table  map[string]string
+	loaded bool
 }
-
-type dicRegion int
-
-const (
-	dicNone dicRegion = iota
-	dicOkuri
-	dicStem
-)
 
 func NewMemDic(path string) *MemDic {
-	kanji := map[string]string{}
-
-	r, err := os.Open(path)
-	if err == nil {
-		_ = Load(r, kanji)
-	}
-
 	return &MemDic{
-		path: path,
-
-		kanji: kanji,
+		path:   path,
+		table:  map[string]string{},
+		loaded: false,
 	}
 }
 
-func (d *MemDic) Save() {
-	w, err := os.Create(d.path)
-	if err == nil {
-		Save(w, d.kanji)
+func (d *MemDic) ensureLoaded() error {
+	if d.loaded {
+		return nil
 	}
+
+	_, err := os.Stat(d.path)
+	if err != nil {
+		// does not exist
+		d.loaded = true
+		return nil
+	}
+
+	r, err := os.Open(d.path)
+	if err != nil {
+		return err
+	}
+	err = Load(r, d.table)
+	if err != nil {
+		return err
+	}
+
+	d.loaded = true
+	return nil
+}
+
+func (d *MemDic) Finish() error {
+	if !d.loaded {
+		return nil
+	}
+
+	w, err := os.Create(d.path)
+	if err != nil {
+		return err
+	}
+	return Save(w, d.table)
 }
 
 func (d *MemDic) Lookup(reading string) ([]string, error) {
-	body, ok := d.kanji[reading]
+	err := d.ensureLoaded()
+	if err != nil {
+		return []string{}, err
+	}
+
+	seq, ok := d.table[reading]
 	if !ok {
 		return []string{}, nil
 	}
-	defaults := parseBody(string(body))
-	return defaults, nil
+	cands := parseSeq(string(seq))
+	return cands, nil
 }
 
 func removeElem(list []string, elem string) []string {
@@ -65,18 +85,47 @@ func removeElem(list []string, elem string) []string {
 	return list
 }
 
-func (d *MemDic) Add(reading, kanji string) {
+func (d *MemDic) Add(reading, word string) error {
+	err := d.ensureLoaded()
+	if err != nil {
+		return err
+	}
+
 	cands, err := d.Lookup(reading)
 	if err != nil {
-		cands = []string{}
+		return err
 	}
-	cands = removeElem(cands, kanji)
+	cands = removeElem(cands, word)
 
-	n := []string{kanji}
+	n := []string{word}
 	n = append(n, cands...)
-	d.kanji[reading] = fmt.Sprintf("/%s/", strings.Join(n, "/"))
+	d.table[reading] = fmt.Sprintf("/%s/", strings.Join(n, "/"))
+
+	return nil
 }
 
-func (d *MemDic) Remove(reading, kanji string) {
-	// TODO
+func (d *MemDic) Remove(reading, word string) error {
+	err := d.ensureLoaded()
+	if err != nil {
+		return err
+	}
+
+	cands, err := d.Lookup(reading)
+	if err != nil {
+		return err
+	}
+	if len(cands) < 1 {
+		return nil
+	}
+
+	cands = removeElem(cands, word)
+
+	if len(cands) < 1 {
+		delete(d.table, reading)
+		return nil
+	}
+
+	d.table[reading] = fmt.Sprintf("/%s/", strings.Join(cands, "/"))
+
+	return nil
 }

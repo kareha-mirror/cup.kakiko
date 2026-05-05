@@ -19,6 +19,15 @@ func fatal(a ...any) {
 
 const appName = "kakiko"
 
+func confPath() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	path := filepath.Join(dir, appName, appName+".yaml")
+	return path, nil
+}
+
 func dicPath() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
@@ -33,7 +42,7 @@ func userDicPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	path := filepath.Join(dir, appName, "skk-jisyo")
+	path := filepath.Join(dir, appName, "skk-edic-user.txt")
 	return path, nil
 }
 
@@ -53,6 +62,16 @@ func main() {
 	}
 	var c = exec.Command(command, arguments...)
 
+	confPath, err := confPath()
+	_, err = os.Stat(confPath)
+	var cfg *fep.Config
+	if err != nil {
+		cfg = fep.DefaultConfig()
+		fep.SaveConfig(confPath, cfg)
+	} else {
+		cfg = fep.LoadConfig(confPath)
+	}
+
 	path, err := dicPath()
 	if err != nil {
 		fatal(err)
@@ -62,7 +81,16 @@ func main() {
 		fatal(err)
 	}
 	en := skk.NewEngine(path, userPath)
-	f := fep.Init(c, en)
-	defer f.Finish()
+
+	f, err := fep.Init(cfg, c, en)
+	if err != nil {
+		fatal(err)
+	}
+	defer func() {
+		err := f.Finish()
+		if err != nil {
+			fatal(err)
+		}
+	}()
 	f.Main()
 }

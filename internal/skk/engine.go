@@ -65,8 +65,12 @@ func NewEngine(path, userPath string) *Engine {
 	return en
 }
 
-func (en *Engine) Finish() {
-	en.dics.Save()
+func (en *Engine) Init() error {
+	return nil
+}
+
+func (en *Engine) Finish() error {
+	return en.dics.Finish()
 }
 
 func (en *Engine) output(update bool) (string, bool) {

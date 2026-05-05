@@ -11,38 +11,44 @@ import (
 	"tea.kareha.org/cup/termi"
 )
 
-type Engine interface {
-	Process(key termi.Key) (string, bool)
-	Status() (string, bool)
-	Finish()
-}
-
 const bufferSize = 1024
 
+type Engine interface {
+	Init() error
+	Finish() error
+	Process(key termi.Key) (string, bool)
+	Status() (string, bool)
+}
+
 type FEP struct {
-	fd       *os.File
+	cfg     *Config
+	fgColor termi.Color
+	bgColor termi.Color
+
+	f        *os.File
 	en       Engine
 	listener termi.EscapeListener
 	esc      bool
 }
 
-func (f *FEP) updateSize() {
+func (fep *FEP) updateSize() error {
 	rows, cols, err := pty.Getsize(os.Stdin)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	pty.Setsize(f.fd, &pty.Winsize{
+	pty.Setsize(fep.f, &pty.Winsize{
 		Rows: uint16(rows - 1),
 		Cols: uint16(cols),
 	})
+	return nil
 }
 
-func writeStringAll(fd *os.File, s string) error {
+func writeStringAll(f *os.File, s string) error {
 	data := []byte(s)
 	total := 0
 
 	for total < len(data) {
-		n, err := fd.Write(data[total:])
+		n, err := f.Write(data[total:])
 		if err != nil {
 			return err
 		}
@@ -51,27 +57,45 @@ func writeStringAll(fd *os.File, s string) error {
 	return nil
 }
 
-func Init(c *exec.Cmd, en Engine) *FEP {
-	fd, err := pty.Start(c)
+func Init(cfg *Config, c *exec.Cmd, en Engine) (*FEP, error) {
+	fgColor, err := termi.ParseHexColor(cfg.FgColor)
 	if err != nil {
-		panic(err)
+		return nil, err
+	}
+	bgColor, err := termi.ParseHexColor(cfg.BgColor)
+	if err != nil {
+		return nil, err
 	}
 
-	f := &FEP{
-		fd:       fd,
+	f, err := pty.Start(c)
+	if err != nil {
+		return nil, err
+	}
+
+	fep := &FEP{
+		cfg:     cfg,
+		fgColor: fgColor,
+		bgColor: bgColor,
+
+		f:        f,
 		en:       en,
 		listener: nil,
 		esc:      false,
 	}
 
-	f.updateSize()
+	err = fep.updateSize()
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGWINCH)
-	go func() {
-		for range ch {
-			f.updateSize()
-		}
-	}()
+	if err == nil {
+		go func() {
+			for range ch {
+				err := fep.updateSize()
+				if err != nil {
+					return
+				}
+			}
+		}()
+	}
 
 	_, h := termi.Size()
 	termi.ScrollRange(0, h-1)
@@ -80,20 +104,25 @@ func Init(c *exec.Cmd, en Engine) *FEP {
 	termi.HomeCursor()
 	termi.Raw()
 
-	f.drawStatus()
+	err = en.Init()
+	if err != nil {
+		reset()
+		return nil, err
+	}
+	fep.drawStatus()
 
 	go func() {
 		for {
 			key := termi.ReadKey()
-			processed, update := f.en.Process(key)
+			processed, update := fep.en.Process(key)
 			if processed != "" {
-				err = writeStringAll(fd, processed)
+				err = writeStringAll(f, processed)
 				if err != nil {
 					return
 				}
 			}
 			if update {
-				f.drawStatus()
+				fep.drawStatus()
 			}
 		}
 	}()
@@ -103,37 +132,41 @@ func Init(c *exec.Cmd, en Engine) *FEP {
 	}()
 
 	listener := func(esc bool) {
-		f.esc = esc
-		f.drawStatus()
+		fep.esc = esc
+		fep.drawStatus()
 	}
-	f.listener = termi.EscapeListener(&listener)
-	termi.AddEscapeListener(f.listener)
+	fep.listener = termi.EscapeListener(&listener)
+	termi.AddEscapeListener(fep.listener)
 
-	return f
+	return fep, nil
 }
 
-func (f *FEP) Finish() {
-	f.en.Finish()
-
-	termi.RemoveEscapeListener(f.listener)
-
+func reset() {
 	termi.ScrollReset()
-
 	termi.Clear()
 	termi.HomeCursor()
 	termi.Cooked()
 	termi.ShowCursor()
 }
 
-func (f *FEP) drawStatus() {
+func (fep *FEP) Finish() error {
+	err := fep.en.Finish()
+	termi.RemoveEscapeListener(fep.listener)
+	reset()
+	return err
+}
+
+func (fep *FEP) drawStatus() {
 	w, h := termi.Size()
 	termi.SaveCursor()
 	termi.HideCursor()
 	termi.MoveCursor(0, h-1)
 
-	termi.DefaultColor()
+	//termi.DefaultColor()
+	termi.SetFgColor(fep.fgColor)
+	termi.SetBgColor(fep.bgColor)
 
-	status, inv := f.en.Status()
+	status, inv := fep.en.Status()
 	if inv {
 		termi.EnableInvert()
 	}
@@ -144,7 +177,7 @@ func (f *FEP) drawStatus() {
 	}
 
 	termi.MoveCursor(w-2, h-1)
-	if f.esc {
+	if fep.esc {
 		termi.Print(" *")
 	} else {
 		termi.Print(" .")
@@ -156,10 +189,10 @@ func (f *FEP) drawStatus() {
 	termi.LoadCursor()
 }
 
-func (f *FEP) Main() {
+func (fep *FEP) Main() {
 	buf := make([]byte, bufferSize)
 	for {
-		n, err := f.fd.Read(buf)
+		n, err := fep.f.Read(buf)
 		if err != nil {
 			return
 		}

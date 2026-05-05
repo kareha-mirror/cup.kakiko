@@ -1,9 +1,3 @@
-// cdbdic.go - SKK-JISYO-E v1 over CDB backend
-// API:
-//   import "tea.kareha.org/cup/kakiko/internal/skkdic"
-//   d := skkdic.NewCDBDic(path)
-//   d.Lookup(reading)
-
 package skkdic
 
 import (
@@ -11,26 +5,33 @@ import (
 )
 
 type CDBDic struct {
-	path     string
-	database *cdb.CDB
+	path string
+	db   *cdb.CDB
 }
 
 func NewCDBDic(path string) *CDBDic {
 	return &CDBDic{
-		path:     path,
-		database: nil,
+		path: path,
+		db:   nil,
 	}
 }
 
+func (d *CDBDic) Finish() error {
+	if d.db == nil {
+		return nil
+	}
+	return d.db.Close()
+}
+
 func (d *CDBDic) getDb() (*cdb.CDB, error) {
-	if d.database == nil {
+	if d.db == nil {
 		db, err := cdb.Open(d.path)
 		if err != nil {
 			return nil, err
 		}
-		d.database = db
+		d.db = db
 	}
-	return d.database, nil
+	return d.db, nil
 }
 
 func (d *CDBDic) Lookup(reading string) ([]string, error) {
@@ -38,10 +39,10 @@ func (d *CDBDic) Lookup(reading string) ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	body, err := db.Get([]byte(reading))
+	seq, err := db.Get([]byte(reading))
 	if err != nil {
 		return []string{}, err
 	}
-	defaults := parseBody(string(body))
-	return defaults, nil
+	cands := parseSeq(string(seq))
+	return cands, nil
 }
