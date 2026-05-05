@@ -1,12 +1,11 @@
 package skkdic
 
 import (
-	"strconv"
 	"strings"
 	"unicode/utf8"
 )
 
-// \\ \/ \; \[ \] \n \t \" \' \u{...}
+// \\ \/ \n
 func unescape(s string) string {
 	buf := strings.Builder{}
 	for i := 0; i < len(s); {
@@ -18,8 +17,7 @@ func unescape(s string) string {
 		}
 		r, size = utf8.DecodeRuneInString(s[i:])
 		i += size
-		if r == '\\' || r == '/' || r == ';' || r == '[' || r == ']' ||
-			r == '\'' || r == '"' {
+		if r == '\\' || r == '/' {
 			buf.WriteRune(r)
 			continue
 		}
@@ -27,59 +25,10 @@ func unescape(s string) string {
 			buf.WriteRune('\n')
 			continue
 		}
-		if r == 't' {
-			buf.WriteRune('\t')
-			continue
-		}
-		if r == 'u' {
-			r, size = utf8.DecodeRuneInString(s[i:])
-			if r != '{' {
-				buf.WriteRune('u')
-				continue
-			}
-			i += size
-			k := strings.Index(s[i:], "}")
-			if k < 0 {
-				buf.WriteString("\\u{")
-				continue
-			}
-			hex := s[i : i+k]
-			n, err := strconv.ParseUint(hex, 16, 32)
-			i += k + 1
-			if err != nil {
-				buf.WriteString("\\u{")
-				buf.WriteString(hex)
-				buf.WriteRune('}')
-				continue
-			}
-			buf.WriteRune(rune(n))
-			continue
-		}
 		// undefined
 		buf.WriteRune(r)
 	}
 	return buf.String()
-}
-
-func splitSemicolon(s string) []string {
-	fields := make([]string, 0)
-	buf := strings.Builder{}
-	esc := false
-	for _, r := range s {
-		if esc {
-			buf.WriteRune(r)
-			esc = false
-		} else if r == '\\' {
-			buf.WriteRune(r)
-			esc = true
-		} else if r == ';' {
-			fields = append(fields, buf.String())
-			buf.Reset()
-		} else {
-			buf.WriteRune(r)
-		}
-	}
-	return fields
 }
 
 func indexOfUnescapedSlash(s string) int {
@@ -96,9 +45,9 @@ func indexOfUnescapedSlash(s string) int {
 	return -1
 }
 
-func parseBody(line string) ([]string, map[string][]string) {
+func parseBody(line string) []string {
 	if line == "" {
-		return []string{}, map[string][]string{}
+		return []string{}
 	}
 	line = strings.TrimSpace(line)
 
@@ -168,59 +117,5 @@ func parseBody(line string) ([]string, map[string][]string) {
 		defaults = append(defaults, surf)
 	}
 
-	blocks := make(map[string][]string, 0)
-	for _, br := range blocksRaw {
-		br = strings.TrimSpace(br)
-		pos := indexOfUnescapedSlash(br)
-		if pos >= 0 {
-			okuri := strings.TrimSpace(br[:pos])
-			rest := br[pos+1:]
-
-			toks := make([]string, 0)
-			bbuf := strings.Builder{}
-			esc2 := false
-			for _, r := range rest {
-				if esc2 {
-					bbuf.WriteRune(r)
-					esc2 = false
-				} else if r == '\\' {
-					bbuf.WriteRune(r)
-					esc2 = true
-				} else if r == '/' {
-					s := strings.TrimSpace(bbuf.String())
-					bbuf.Reset()
-					if s == "" {
-						continue
-					}
-					toks = append(toks, s)
-				} else {
-					bbuf.WriteRune(r)
-				}
-			}
-			last := strings.TrimSpace(bbuf.String())
-			if last != "" {
-				toks = append(toks, last)
-			}
-
-			if okuri != "" && len(toks) > 0 {
-				arr := make([]string, 0)
-				for _, rawc := range toks {
-					segs := splitSemicolon(rawc)
-					if len(segs) < 1 {
-						continue
-					}
-					surf := unescape(strings.TrimSpace(segs[0]))
-					if surf == "" {
-						continue
-					}
-					arr = append(arr, surf)
-				}
-				if len(arr) > 0 {
-					blocks[okuri] = arr
-				}
-			}
-		}
-	}
-
-	return defaults, blocks
+	return defaults
 }

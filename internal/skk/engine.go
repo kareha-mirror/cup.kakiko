@@ -118,15 +118,7 @@ func (en *Engine) flush() {
 	} else if en.conv.hasCands() {
 		s.WriteString(en.conv.cand())
 
-		if en.conv.mode == convOkuri {
-			en.dics.AddOkuri(
-				en.conv.stem.String(),
-				en.conv.okuri.String(),
-				en.conv.cand(),
-			)
-		} else {
-			en.dics.Add(en.conv.stem.String(), en.conv.cand())
-		}
+		en.dics.Add(en.conv.stem.String(), en.conv.cand())
 	} else {
 		if en.conv.mode == convOkuri {
 			stem, ok := en.conv.stem.Substring(0, en.conv.stem.Len()-1)

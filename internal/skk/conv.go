@@ -1,8 +1,6 @@
 package skk
 
 import (
-	"strings"
-
 	"tea.kareha.org/cup/termi"
 )
 
@@ -63,12 +61,7 @@ func (c *conv) candByIndex(index int) string {
 		return ""
 	}
 
-	cand := c.cands[index]
-	semicolon := strings.Index(cand, ";")
-	if semicolon < 0 {
-		return cand
-	}
-	return cand[:semicolon]
+	return c.cands[index]
 }
 
 func (c *conv) cand() string {

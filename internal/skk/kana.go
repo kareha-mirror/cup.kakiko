@@ -30,13 +30,7 @@ func (en *Engine) handleConvEnter() (string, bool) {
 		regWord := en.regBuf.String()
 		en.regBuf.Reset()
 
-		if en.conv.mode == convOkuri {
-			en.dics.AddOkuri(
-				en.conv.stem.String(), en.conv.okuri.String(), regWord,
-			)
-		} else {
-			en.dics.Add(en.conv.stem.String(), regWord)
-		}
+		en.dics.Add(en.conv.stem.String(), regWord)
 
 		en.conv.out.WriteString(regWord)
 		en.conv.stem.Reset()
@@ -101,13 +95,7 @@ func (en *Engine) handleConv() (string, bool) {
 		stem := en.conv.stem.String()
 		stem = romaji.KataToHira(stem)
 		var err error
-		if en.conv.mode == convOkuri {
-			okuri := en.conv.okuri.String()
-			okuri = romaji.KataToHira(okuri)
-			en.conv.cands, err = en.dics.LookupOkuri(stem, okuri)
-		} else {
-			en.conv.cands, err = en.dics.Lookup(stem)
-		}
+		en.conv.cands, err = en.dics.Lookup(stem)
 		en.conv.index = 0
 		if err != nil {
 			en.message = fmt.Sprintf("%v", err)
@@ -333,10 +321,8 @@ func (en *Engine) handleAlpha(r rune, update bool) (string, bool) {
 
 		stem := en.conv.stem.String()
 		stem = romaji.KataToHira(stem)
-		okuri := en.conv.okuri.String()
-		okuri = romaji.KataToHira(okuri)
 		var err error
-		en.conv.cands, err = en.dics.LookupOkuri(stem, okuri)
+		en.conv.cands, err = en.dics.Lookup(stem)
 		en.conv.index = 0
 		if err != nil {
 			en.message = fmt.Sprintf("%v", err)

@@ -27,15 +27,7 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 
 	if en.conv.mode != convNone {
 		if en.conv.hasCands() {
-			if en.conv.mode == convOkuri {
-				en.dics.AddOkuri(
-					en.conv.stem.String(),
-					en.conv.okuri.String(),
-					en.conv.cand(),
-				)
-			} else {
-				en.dics.Add(en.conv.stem.String(), en.conv.cand())
-			}
+			en.dics.Add(en.conv.stem.String(), en.conv.cand())
 
 			en.conv.out.WriteString(en.conv.cand())
 			if en.conv.mode == convOkuri {
@@ -196,13 +188,7 @@ func (en *Engine) handleEnter(r rune) (string, bool) {
 		kanji := en.regBuf.String()
 		en.regBuf.Reset()
 
-		if en.conv.mode == convOkuri {
-			en.dics.AddOkuri(
-				en.conv.stem.String(), en.conv.okuri.String(), kanji,
-			)
-		} else {
-			en.dics.Add(en.conv.stem.String(), kanji)
-		}
+		en.dics.Add(en.conv.stem.String(), kanji)
 
 		en.conv.out.WriteString(kanji)
 		en.conv.stem.Reset()

@@ -3,7 +3,6 @@
 //   import "tea.kareha.org/cup/kakiko/internal/skkdic"
 //   d := skkdic.NewCDBDic(path)
 //   d.Lookup(reading)
-//   d.LookupOkuri(key, okuri)
 
 package skkdic
 
@@ -43,25 +42,6 @@ func (d *CDBDic) Lookup(reading string) ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	defaults, _ := parseBody(string(body))
-	return defaults, nil
-}
-
-func (d *CDBDic) LookupOkuri(key, okuri string) ([]string, error) {
-	db, err := d.getDb()
-	if err != nil {
-		return []string{}, err
-	}
-	body, err := db.Get([]byte(key))
-	if err != nil {
-		return []string{}, err
-	}
-	defaults, blocks := parseBody(string(body))
-	if okuri != "" && len(blocks) > 0 {
-		result, ok := blocks[okuri]
-		if ok && len(result) > 0 {
-			return result, nil
-		}
-	}
+	defaults := parseBody(string(body))
 	return defaults, nil
 }
