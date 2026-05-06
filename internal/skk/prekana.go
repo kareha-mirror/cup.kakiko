@@ -189,6 +189,7 @@ func (en *Engine) handleEnter(r rune) (string, bool) {
 		en.regBuf.Reset()
 
 		en.dics.Add(en.conv.stem.String(), kanji)
+		en.dics.AddDiff(en.conv.stem.String(), kanji)
 
 		en.conv.out.WriteString(kanji)
 		en.conv.stem.Reset()

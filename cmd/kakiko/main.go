@@ -10,6 +10,7 @@ import (
 	"tea.kareha.org/cup/kakiko/internal/skk"
 )
 
+const appName = "kakiko"
 const fallbackCommand = "/bin/sh"
 
 func fatal(a ...any) {
@@ -17,33 +18,36 @@ func fatal(a ...any) {
 	os.Exit(1)
 }
 
-const appName = "kakiko"
-
-func confPath() (string, error) {
+func getConfigPath() string {
 	dir, err := os.UserConfigDir()
 	if err != nil {
-		return "", err
+		fatal(err)
 	}
-	path := filepath.Join(dir, appName, appName+".yaml")
-	return path, nil
+	return filepath.Join(dir, appName, appName+".yaml")
 }
 
-func dicPath() (string, error) {
+func getSKKDicPath() string {
 	dir, err := os.UserConfigDir()
 	if err != nil {
-		return "", err
+		fatal(err)
 	}
-	path := filepath.Join(dir, appName, "SKK-JISYO.L.cdb")
-	return path, nil
+	return filepath.Join(dir, appName, "skk-edic-legacy-l.cdb")
 }
 
-func userDicPath() (string, error) {
+func getSKKUserDicPath() string {
 	dir, err := os.UserConfigDir()
 	if err != nil {
-		return "", err
+		fatal(err)
 	}
-	path := filepath.Join(dir, appName, "skk-edic-user.txt")
-	return path, nil
+	return filepath.Join(dir, appName, "skk-edic-user.txt")
+}
+
+func getSKKDiffDicPath() string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		fatal(err)
+	}
+	return filepath.Join(dir, appName, "skk-edic-diff.txt")
 }
 
 func main() {
@@ -62,27 +66,22 @@ func main() {
 	}
 	var c = exec.Command(command, arguments...)
 
-	confPath, err := confPath()
-	_, err = os.Stat(confPath)
 	var cfg *fep.Config
+	cfgPath := getConfigPath()
+	_, err := os.Stat(cfgPath)
 	if err != nil {
 		cfg = fep.DefaultConfig()
-		fep.SaveConfig(confPath, cfg)
+		fep.SaveConfig(cfgPath, cfg)
 	} else {
-		cfg = fep.LoadConfig(confPath)
+		cfg = fep.LoadConfig(cfgPath)
 	}
 
-	path, err := dicPath()
-	if err != nil {
-		fatal(err)
-	}
-	userPath, err := userDicPath()
-	if err != nil {
-		fatal(err)
-	}
-	en := skk.NewEngine(path, userPath)
+	dicPath := getSKKDicPath()
+	userDicPath := getSKKUserDicPath()
+	diffDicPath := getSKKDiffDicPath()
+	en := skk.NewEngine(dicPath, userDicPath, diffDicPath)
 
-	f, err := fep.Init(cfg, c, en)
+	f, err := fep.Init(cfg, en, c)
 	if err != nil {
 		fatal(err)
 	}
@@ -92,5 +91,6 @@ func main() {
 			fatal(err)
 		}
 	}()
+
 	f.Main()
 }

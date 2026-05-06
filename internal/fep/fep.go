@@ -57,11 +57,12 @@ func writeStringAll(f *os.File, s string) error {
 	return nil
 }
 
-func Init(cfg *Config, c *exec.Cmd, en Engine) (*FEP, error) {
+func Init(cfg *Config, en Engine, c *exec.Cmd) (*FEP, error) {
 	fgColor, err := termi.ParseHexColor(cfg.FgColor)
 	if err != nil {
 		return nil, err
 	}
+
 	bgColor, err := termi.ParseHexColor(cfg.BgColor)
 	if err != nil {
 		return nil, err
@@ -114,7 +115,7 @@ func Init(cfg *Config, c *exec.Cmd, en Engine) (*FEP, error) {
 	go func() {
 		for {
 			key := termi.ReadKey()
-			processed, update := fep.en.Process(key)
+			processed, update := en.Process(key)
 			if processed != "" {
 				err = writeStringAll(f, processed)
 				if err != nil {

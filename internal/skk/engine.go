@@ -37,10 +37,11 @@ type Engine struct {
 	out strings.Builder
 }
 
-func NewEngine(path, userPath string) *Engine {
+func NewEngine(path, userPath, diffPath string) *Engine {
 	dics := skkdic.Dics{}
 	dics.AddDic(skkdic.NewCDBDic(path))
 	dics.SetUserDic(skkdic.NewMemDic(userPath))
+	dics.SetDiffDic(skkdic.NewMemDic(diffPath))
 
 	en := &Engine{
 		dics: dics,

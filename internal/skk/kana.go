@@ -31,6 +31,7 @@ func (en *Engine) handleConvEnter() (string, bool) {
 		en.regBuf.Reset()
 
 		en.dics.Add(en.conv.stem.String(), regWord)
+		en.dics.AddDiff(en.conv.stem.String(), regWord)
 
 		en.conv.out.WriteString(regWord)
 		en.conv.stem.Reset()

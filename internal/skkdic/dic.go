@@ -12,8 +12,9 @@ type UserDic interface {
 }
 
 type Dics struct {
-	ud UserDic
-	d  []Dic
+	d    []Dic
+	ud   UserDic
+	diff UserDic
 }
 
 func (dics *Dics) Lookup(reading string) ([]string, error) {
@@ -56,14 +57,35 @@ func (dics *Dics) Remove(reading, word string) error {
 	return dics.ud.Remove(reading, word)
 }
 
-func (dics *Dics) SetUserDic(ud UserDic) {
-	dics.ud = ud
-}
-
 func (dics *Dics) AddDic(d Dic) {
 	dics.d = append(dics.d, d)
 }
 
+func (dics *Dics) SetUserDic(ud UserDic) {
+	dics.ud = ud
+}
+
+func (dics *Dics) SetDiffDic(diff UserDic) {
+	dics.diff = diff
+}
+
+func (dics *Dics) AddDiff(reading, word string) error {
+	return dics.diff.Add(reading, word)
+}
+
 func (dics *Dics) Finish() error {
-	return dics.ud.Finish()
+	var uerr, derr error
+	if dics.ud != nil {
+		uerr = dics.ud.Finish()
+	}
+	if dics.diff != nil {
+		derr = dics.diff.Finish()
+	}
+	if uerr != nil {
+		return uerr
+	}
+	if derr != nil {
+		return derr
+	}
+	return nil
 }
