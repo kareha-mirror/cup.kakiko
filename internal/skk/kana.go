@@ -157,23 +157,38 @@ func (en *Engine) handleKigou(kigou string, update bool) (string, bool) {
 	return en.output(update)
 }
 
-func (en *Engine) handleNonAlpha(r rune, update bool) (string, bool) {
-	if en.conv.mode != convNone {
-		en.flush()
-		en.conv.reset()
-		update = true
+func (en *Engine) handleNonAlpha(r rune) (string, bool) {
+	if en.inputBuf.String() == "n" {
+		var nn string
+		if en.inputMode == inputHira {
+			nn = "ん"
+		} else if en.inputMode == inputKata {
+			nn = "ン"
+		}
+		if en.conv.mode == convOkuri {
+			en.conv.okuri.WriteString(nn)
+		} else if en.conv.mode == convStem {
+			en.conv.stem.WriteString(nn)
+		} else if en.conv.mode == convNone {
+			en.conv.out.WriteString(nn)
+		}
+	}
+	en.inputBuf.Reset()
+
+	if en.conv.mode == convOkuri {
+		en.conv.okuri.WriteRune(r)
+	} else if en.conv.mode == convStem {
+		en.conv.stem.WriteRune(r)
+	} else {
+		en.conv.out.WriteRune(r)
 	}
 
-	if en.regMode {
-		en.regBuf.WriteRune(r)
-		update = true
-	} else if en.lineMode {
-		en.lineBuf.WriteRune(r)
-		update = true
-	} else {
-		en.out.WriteRune(r)
+	if en.conv.mode == convNone {
+		en.flush()
+		en.conv.reset()
 	}
-	return en.output(update)
+
+	return en.output(true)
 }
 
 func (en *Engine) enterASCIIMode() (string, bool) {

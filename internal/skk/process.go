@@ -153,7 +153,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	}
 
 	if r < 'a' || r > 'z' {
-		return en.handleNonAlpha(r, update)
+		return en.handleNonAlpha(r)
 	}
 
 	switch r {
