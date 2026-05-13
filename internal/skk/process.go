@@ -115,6 +115,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	if en.conv.hasCands() {
 		tail, ok := en.conv.okuri.Tail()
 		if en.conv.mode != convOkuri || ok && tail != 'っ' && tail != 'ッ' {
+			en.dics.Add(en.conv.stem.String(), en.conv.cand())
+
 			en.write(en.conv.cand() + en.conv.okuri.String())
 			en.conv.reset()
 			update = true

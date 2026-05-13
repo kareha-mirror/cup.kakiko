@@ -1,0 +1,117 @@
+; https://www.stat.go.jp/data/k-sugata/pdf/all_ken2026.pdf
+
+ほっかいどう /北海道/Hokkaido/
+あおもりけん /青森県/Aomori-ken/
+いわてけん /岩手県/Iwate-ken/
+みやぎけん /宮城県/Miyagi-ken/
+あきたけん /秋田県/Akita-ken/
+
+やまがたけん /山形県/Yamagata-ken/
+ふくしまけん /福島県/Fukushima-ken/
+いばらきけん /茨木県/Ibaraki-ken/
+とちぎけん /栃木県/Tochigi-ken/
+ぐんまけん /群馬県/Gumma-ken/
+
+さいたまけん /埼玉県/Saitama-ken/
+ちばけん /千葉県/Chiba-ken/
+とうきょうと /東京都/Tokyo-to/
+かながわけん /神奈川県/Kanagawa-ken/
+にいがたけん /新潟県/Niigata-ken/
+
+とやまけん /富山県/Toyama-ken/
+いしかわけん /石川県/Ishikawa-ken/
+ふくいけん /福井県/Fukui-ken/
+やまなしけん /山梨県/Yamanashi-ken/
+ながのけん /長野県/Nagano-ken/
+
+ぎふけん /岐阜県/Gifu-ken/
+しずおかけん /静岡県/Shizuoka-ken/
+あいちけん /愛知県/Aichi-ken/
+みえけん /三重県/Mie-ken/
+しがけん /滋賀県/Shiga-ken/
+
+きょうとふ /京都府/Kyoto-fu/
+おおさかふ /大阪府/Osaka-fu/
+ひょうごけん /兵庫県/Hyogo-ken/
+ならけん /奈良県/Nara-ken/
+わかやまけん /和歌山県/Wakayama-ken/
+
+とっとりけん /鳥取県/Tottori-ken/
+しまねけん /島根県/Shimane-ken/
+おかやまけん /岡山県/Okayama-ken/
+ひろしまけん /広島県/Hiroshima-ken/
+やまぐちけん /山口県/Yamaguchi-ken/
+
+とくしまけん /徳島県/Tokushima-ken/
+かがわけん /香川県/Kagawa-ken/
+えひめけん /愛媛県/Ehime-ken/
+こうちけん /高知県/Kochi-ken/
+ふくおかけん /福岡県/Fukuoka-ken/
+
+さがけん /佐賀県/Saga-ken/
+ながさきけん /長崎県/Nagasaki-ken/
+くまもとけん /熊本県/Kumamoto-ken/
+おおいたけん /大分県/Oita-ken/
+みやざきけん /宮崎県/Miyazaki-ken/
+
+かごしまけん /鹿児島県/Kagoshima-ken/
+おきなわけん /沖縄県/Okinawa-ken/
+
+;
+
+;ほっかいどう /北海道/Hokkaido/
+あおもり /青森/Aomori/
+いわて /岩手/Iwate/
+みやぎ /宮城/Miyagi/
+あきた /秋田/Akita/
+
+やまがた /山形/Yamagata/
+ふくしま /福島/Fukushima/
+いばらき /茨木/Ibaraki/
+とちぎ /栃木/Tochigi/
+ぐんま /群馬/Gumma/
+
+さいたま /埼玉/Saitama/
+ちば /千葉/Chiba/
+とうきょう /東京/Tokyo/
+かながわ /神奈川/Kanagawa/
+にいがた /新潟/Niigata/
+
+とやま /富山/Toyama/
+いしかわ /石川/Ishikawa/
+ふくい /福井/Fukui/
+やまなし /山梨/Yamanashi/
+ながの /長野/Nagano/
+
+ぎふ /岐阜/Gifu/
+しずおか /静岡/Shizuoka/
+あいち /愛知/Aichi/
+みえ /三重/Mie/
+しが /滋賀/Shiga/
+
+きょうと /京都/Kyoto/
+おおさか /大阪/Osaka/
+ひょうご /兵庫/Hyogo/
+なら /奈良/Nara/
+わかやま /和歌山/Wakayama/
+
+とっとり /鳥取/Tottori/
+しまね /島根/Shimane/
+おかやま /岡山/Okayama/
+ひろしま /広島/Hiroshima/
+やまぐち /山口/Yamaguchi/
+
+とくしま /徳島/Tokushima/
+かがわ /香川/Kagawa/
+えひめ /愛媛/Ehime/
+こうち /高知/Kochi/
+ふくおか /福岡/Fukuoka/
+
+さが /佐賀/Saga/
+ながさき /長崎/Nagasaki/
+くまもと /熊本/Kumamoto/
+おおいた /大分/Oita/
+みやざき /宮崎/Miyazaki/
+
+かごしま /鹿児島/Kagoshima/
+おきなわ /沖縄/Okinawa/
