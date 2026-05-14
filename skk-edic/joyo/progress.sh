@@ -1,6 +1,16 @@
 #!/bin/sh
 
-done=$(grep -h '%%%' *.txt | wc -l)
+done=$(
+  awk '
+    FNR == 1 { stop = 0 }
+
+    /^----$/ { stop = 1 }
+
+    !stop && /%%%/ { n++ }
+
+    END { print n }
+  ' *.txt
+)
 total=2136
 
 percent=$(echo "scale=2; $done * 100 / $total" | bc)
