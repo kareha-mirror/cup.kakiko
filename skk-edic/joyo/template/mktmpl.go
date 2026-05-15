@@ -59,6 +59,7 @@ func main() {
 	out, _ := os.Create(os.Args[2])
 	defer out.Close()
 	writer := bufio.NewWriter(out)
+	defer writer.Flush()
 
 	lines := []string{}
 
