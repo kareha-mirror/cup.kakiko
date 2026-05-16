@@ -25,13 +25,8 @@ func HasOkuri(reading string) bool {
 	return false
 }
 
-func Load(r io.Reader, table map[string]string) error {
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return err
-	}
-
-	lines := strings.Split(string(data), "\n")
+func LoadStr(data string, table map[string]string) error {
+	lines := strings.Split(data, "\n")
 	for _, line := range lines {
 		if line == "" {
 			continue
@@ -59,6 +54,15 @@ func Load(r io.Reader, table map[string]string) error {
 	}
 
 	return nil
+}
+
+func Load(r io.Reader, table map[string]string) error {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+
+	return LoadStr(string(data), table)
 }
 
 func sortedReadings(table map[string]string) []string {

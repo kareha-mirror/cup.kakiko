@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,9 @@ import (
 
 const appName = "kakiko"
 const fallbackCommand = "/bin/sh"
+
+//go:embed skk-edic-joyo.txt
+var skkEdicJoyo string
 
 func fatal(a ...any) {
 	fmt.Fprintln(os.Stderr, a...)
@@ -79,7 +83,7 @@ func main() {
 	dicPath := getSKKDicPath()
 	userDicPath := getSKKUserDicPath()
 	diffDicPath := getSKKDiffDicPath()
-	en := skk.NewEngine(dicPath, userDicPath, diffDicPath)
+	en := skk.NewEngine(skkEdicJoyo, dicPath, userDicPath, diffDicPath)
 
 	f, err := fep.Init(cfg, en, c)
 	if err != nil {
