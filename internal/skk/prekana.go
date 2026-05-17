@@ -12,24 +12,10 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 		return en.output(true)
 	}
 
-	if en.regMode {
-		if en.regBuf.RemoveTail() {
-			return en.output(true)
-		}
-
-		if en.conv.out.RemoveTail() {
-			return en.output(true)
-		}
-
-		en.message = "Text is read-only"
-		return en.output(true)
-	}
-
 	if en.conv.mode != convNone {
 		if en.conv.hasCands() {
 			en.dics.Add(en.conv.stem.String(), en.conv.cand())
 
-			en.conv.out.WriteString(en.conv.cand())
 			if en.conv.mode == convOkuri {
 				en.conv.okuri.RemoveTail()
 			} else {
@@ -53,6 +39,19 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 			en.conv.mode = convNone
 			return en.output(true)
 		}
+	}
+
+	if en.regMode {
+		if en.regBuf.RemoveTail() {
+			return en.output(true)
+		}
+
+		if en.conv.out.RemoveTail() {
+			return en.output(true)
+		}
+
+		en.message = "Text is read-only"
+		return en.output(true)
 	}
 
 	if en.lineMode && en.lineBuf.RemoveTail() {
@@ -192,6 +191,7 @@ func (en *Engine) handleEnter(r rune) (string, bool) {
 		en.dics.AddDiff(en.conv.stem.String(), kanji)
 
 		en.conv.out.WriteString(kanji)
+		en.conv.out.WriteString(en.conv.okuri.String())
 		en.conv.stem.Reset()
 		en.conv.okuri.Reset()
 		en.conv.mode = convNone

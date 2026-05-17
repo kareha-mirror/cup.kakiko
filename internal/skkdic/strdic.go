@@ -27,4 +27,3 @@ func (d *StrDic) Lookup(reading string) ([]string, error) {
 	cands := parseSeq(string(seq))
 	return cands, nil
 }
-

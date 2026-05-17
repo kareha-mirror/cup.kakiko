@@ -30,10 +30,10 @@ func (en *Engine) handleConvEnter() (string, bool) {
 		regWord := en.regBuf.String()
 		en.regBuf.Reset()
 
+		en.conv.out.WriteString(regWord)
 		en.dics.Add(en.conv.stem.String(), regWord)
 		en.dics.AddDiff(en.conv.stem.String(), regWord)
 
-		en.conv.out.WriteString(regWord)
 		en.conv.stem.Reset()
 		en.conv.okuri.Reset()
 		en.conv.mode = convNone

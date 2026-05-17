@@ -100,3 +100,16 @@ func (c *conv) advanceMode() {
 		c.mode = convOkuri
 	}
 }
+
+func (c *conv) trueStem() string {
+	if c.mode == convOkuri {
+		stem, ok := c.stem.Substring(0, c.stem.Len()-1)
+		if ok {
+			return stem
+		} else {
+			return ""
+		}
+	} else {
+		return c.stem.String()
+	}
+}

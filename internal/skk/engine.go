@@ -122,27 +122,15 @@ func (en *Engine) write(s string) {
 
 func (en *Engine) flush() {
 	s := strings.Builder{}
+	s.WriteString(en.conv.out.String())
 
-	if en.conv.out.Len() > 0 {
-		s.WriteString(en.conv.out.String())
-	} else if en.conv.hasCands() {
+	if en.conv.hasCands() {
 		s.WriteString(en.conv.cand())
-
 		en.dics.Add(en.conv.stem.String(), en.conv.cand())
 	} else {
-		if en.conv.mode == convOkuri {
-			stem, ok := en.conv.stem.Substring(0, en.conv.stem.Len()-1)
-			if ok {
-				s.WriteString(stem)
-			} else {
-				s.WriteString(en.conv.stem.String())
-			}
-		} else {
-			s.WriteString(en.conv.stem.String())
-		}
+		s.WriteString(en.conv.trueStem())
 	}
 
 	s.WriteString(en.conv.okuri.String())
-
 	en.write(s.String())
 }

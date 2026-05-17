@@ -62,16 +62,9 @@ func (en *Engine) Status() (string, bool) {
 	if en.regMode {
 		s.WriteString("[登録]")
 		conv := en.stack[len(en.stack)-1]
+		s.WriteString(conv.trueStem())
 		if conv.mode == convOkuri {
-			stem := ""
-			temp, ok := conv.stem.Substring(0, conv.stem.Len()-1)
-			if ok {
-				stem = temp
-			}
-			s.WriteString(stem)
 			s.WriteRune('*')
-		} else {
-			s.WriteString(conv.stem.String())
 		}
 		s.WriteString(conv.okuri.String())
 		s.WriteRune(' ')
@@ -86,14 +79,7 @@ func (en *Engine) Status() (string, bool) {
 			s.WriteString(en.conv.cand())
 		} else {
 			s.WriteRune('▽')
-			if en.conv.mode == convOkuri {
-				clipped, ok := en.conv.stem.Substring(0, en.conv.stem.Len()-1)
-				if ok {
-					s.WriteString(clipped)
-				}
-			} else {
-				s.WriteString(en.conv.stem.String())
-			}
+			s.WriteString(en.conv.trueStem())
 		}
 	}
 
