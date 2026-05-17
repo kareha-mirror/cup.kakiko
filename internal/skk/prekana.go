@@ -9,6 +9,10 @@ import (
 func (en *Engine) handleBackspace(r rune) (string, bool) {
 	if en.inputBuf.Len() > 0 {
 		en.inputBuf.Reset()
+		if en.conv.mode == convOkuri {
+			en.conv.mode = convStem
+			en.conv.stem.RemoveTail()
+		}
 		return en.output(true)
 	}
 
@@ -19,7 +23,10 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 			if en.conv.mode == convOkuri {
 				en.conv.okuri.RemoveTail()
 			} else {
+				en.conv.out.WriteString(en.conv.cand())
 				en.conv.out.RemoveTail()
+				en.conv.clearCands()
+				en.conv.stem.Reset()
 			}
 			en.flush()
 			en.conv.reset()
@@ -183,6 +190,7 @@ func (en *Engine) handleEnter(r rune) (string, bool) {
 	if en.regMode {
 		en.flush()
 		en.endReg()
+		en.conv.clearCands()
 
 		kanji := en.regBuf.String()
 		en.regBuf.Reset()
