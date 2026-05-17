@@ -9,6 +9,23 @@ import (
 )
 
 func (en *Engine) Process(key termi.Key) (string, bool) {
+	if en.pasteMode {
+		if key.Kind == termi.KeyEndPaste {
+			en.pasteMode = false
+			return "", false
+		}
+		if key.Kind != termi.KeyRune {
+			en.pasteMode = false
+			return "", false
+		}
+		return en.handleRune(key.Rune)
+	}
+
+	if key.Kind == termi.KeyBeginPaste {
+		en.pasteMode = true
+		return "", false
+	}
+
 	// hide message
 	if en.message != "" {
 		en.message = ""

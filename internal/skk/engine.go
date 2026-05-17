@@ -32,6 +32,8 @@ type Engine struct {
 	lineBuf  termi.RuneBuf
 	linePass bool
 
+	pasteMode bool
+
 	message string
 
 	out strings.Builder
@@ -58,6 +60,8 @@ func NewEngine(builtinDic, path, userPath, diffPath string) *Engine {
 		lineMode: false,
 		lineBuf:  termi.RuneBuf{},
 		linePass: false,
+
+		pasteMode: false,
 
 		message: "",
 
