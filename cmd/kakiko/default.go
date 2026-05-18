@@ -1,4 +1,4 @@
-//go:build !minimal
+//go:build !joyo
 
 package main
 
@@ -9,4 +9,4 @@ import (
 const appName = "kakiko"
 
 //go:embed skk-edic-default.txt
-var skkEdicDefault string
+var skkdicBuiltin string

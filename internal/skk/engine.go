@@ -39,15 +39,9 @@ type Engine struct {
 	out strings.Builder
 }
 
-func NewEngine(builtinDic, path, userPath, diffPath string) *Engine {
-	dics := skkdic.Dics{}
-	dics.AddDic(skkdic.NewStrDic(builtinDic))
-	dics.AddDic(skkdic.NewCDBDic(path))
-	dics.SetUserDic(skkdic.NewMemDic(userPath))
-	dics.SetDiffDic(skkdic.NewMemDic(diffPath))
-
-	en := &Engine{
-		dics: dics,
+func NewEngine() *Engine {
+	return &Engine{
+		dics: skkdic.Dics{},
 
 		inputMode: inputASCII,
 		inputBuf:  termi.RuneBuf{},
@@ -67,8 +61,18 @@ func NewEngine(builtinDic, path, userPath, diffPath string) *Engine {
 
 		out: strings.Builder{},
 	}
+}
 
-	return en
+func (en *Engine) AddDic(dic skkdic.Dic) {
+	en.dics.AddDic(dic)
+}
+
+func (en *Engine) SetUserDic(dic skkdic.UserDic) {
+	en.dics.SetUserDic(dic)
+}
+
+func (en *Engine) SetDiffDic(dic skkdic.UserDic) {
+	en.dics.SetDiffDic(dic)
 }
 
 func (en *Engine) Init() error {

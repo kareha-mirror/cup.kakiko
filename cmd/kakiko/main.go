@@ -9,6 +9,7 @@ import (
 
 	"tea.kareha.org/cup/kakiko/internal/fep"
 	"tea.kareha.org/cup/kakiko/internal/skk"
+	"tea.kareha.org/cup/kakiko/internal/skkdic"
 )
 
 const fallbackCommand = "/bin/sh"
@@ -77,10 +78,22 @@ func main() {
 		cfg = fep.LoadConfig(cfgPath)
 	}
 
+	en := skk.NewEngine()
+
+	builtinDic := skkdic.NewStrDic(skkdicBuiltin)
+	en.AddDic(builtinDic)
+
 	dicPath := getSKKDicPath(*configDir)
+	mainDic := skkdic.NewCDBDic(dicPath)
+	en.AddDic(mainDic)
+
 	userDicPath := getSKKUserDicPath(*configDir)
+	userDic := skkdic.NewMemDic(userDicPath)
+	en.SetUserDic(userDic)
+
 	diffDicPath := getSKKDiffDicPath(*configDir)
-	en := skk.NewEngine(skkEdicDefault, dicPath, userDicPath, diffDicPath)
+	diffDic := skkdic.NewMemDic(diffDicPath)
+	en.SetDiffDic(diffDic)
 
 	f, err := fep.Init(cfg, en, c)
 	if err != nil {

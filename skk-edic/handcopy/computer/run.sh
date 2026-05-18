@@ -1,2 +1,2 @@
 #!/bin/sh
-kakikom -d config
+kakiko-joyo -d config
