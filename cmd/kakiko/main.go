@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,56 +18,57 @@ func fatal(a ...any) {
 	os.Exit(1)
 }
 
-func getConfigPath() string {
+func getConfigDir() string {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		fatal(err)
 	}
-	return filepath.Join(dir, appName, appName+".yaml")
+	return filepath.Join(dir, appName)
 }
 
-func getSKKDicPath() string {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		fatal(err)
-	}
-	return filepath.Join(dir, appName, "skk-edic-legacy-l.cdb")
+func getConfigPath(dir string) string {
+	return filepath.Join(dir, appName+".yaml")
 }
 
-func getSKKUserDicPath() string {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		fatal(err)
-	}
-	return filepath.Join(dir, appName, "skk-edic-user.txt")
+func getSKKDicPath(dir string) string {
+	return filepath.Join(dir, "skk-edic-legacy-l.cdb")
 }
 
-func getSKKDiffDicPath() string {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		fatal(err)
-	}
-	return filepath.Join(dir, appName, "skk-edic-diff.txt")
+func getSKKUserDicPath(dir string) string {
+	return filepath.Join(dir, "skk-edic-user.txt")
+}
+
+func getSKKDiffDicPath(dir string) string {
+	return filepath.Join(dir, "skk-edic-diff.txt")
 }
 
 func main() {
+	configDir := flag.String("d", "", "config directory")
+	flag.Parse()
+
+	if *configDir == "" {
+		*configDir = getConfigDir()
+	}
+
+	args := flag.Args()
+
 	var command string
 	var arguments []string
-	if len(os.Args) < 2 {
+	if len(args) < 1 {
 		command = os.Getenv("SHELL")
 		if command == "" {
 			command = fallbackCommand
 		}
 	} else {
-		command = os.Args[1]
+		command = args[0]
 	}
-	if len(os.Args) > 2 {
-		arguments = os.Args[2:]
+	if len(args) > 1 {
+		arguments = args[1:]
 	}
 	var c = exec.Command(command, arguments...)
 
 	var cfg *fep.Config
-	cfgPath := getConfigPath()
+	cfgPath := getConfigPath(*configDir)
 	_, err := os.Stat(cfgPath)
 	if err != nil {
 		cfg = fep.DefaultConfig()
@@ -75,9 +77,9 @@ func main() {
 		cfg = fep.LoadConfig(cfgPath)
 	}
 
-	dicPath := getSKKDicPath()
-	userDicPath := getSKKUserDicPath()
-	diffDicPath := getSKKDiffDicPath()
+	dicPath := getSKKDicPath(*configDir)
+	userDicPath := getSKKUserDicPath(*configDir)
+	diffDicPath := getSKKDiffDicPath(*configDir)
 	en := skk.NewEngine(skkEdicDefault, dicPath, userDicPath, diffDicPath)
 
 	f, err := fep.Init(cfg, en, c)
