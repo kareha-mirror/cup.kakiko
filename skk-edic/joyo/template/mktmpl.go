@@ -8,6 +8,11 @@ import (
 	"unicode"
 )
 
+func fatal(a ...any) {
+	fmt.Fprintln(os.Stderr, a...)
+	os.Exit(1)
+}
+
 func isKatakana(s string) bool {
 	for _, r := range s {
 		if !unicode.In(r, unicode.Katakana) {
@@ -52,11 +57,22 @@ func splitKanjis(s string) []string {
 }
 
 func main() {
-	in, _ := os.Open(os.Args[1])
+	if len(os.Args) < 3 {
+		fmt.Fprintf(os.Stderr, "Usage: %s table.txt template.txt", os.Args[0])
+		os.Exit(1)
+	}
+
+	in, err := os.Open(os.Args[1])
+	if err != nil {
+		fatal(err)
+	}
 	defer in.Close()
 	scanner := bufio.NewScanner(in)
 
-	out, _ := os.Create(os.Args[2])
+	out, err := os.Create(os.Args[2])
+	if err != nil {
+		fatal(err)
+	}
 	defer out.Close()
 	writer := bufio.NewWriter(out)
 	defer writer.Flush()

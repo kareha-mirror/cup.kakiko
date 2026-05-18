@@ -40,7 +40,7 @@ func (en *Engine) Status() (string, bool) {
 	s.WriteRune('(')
 	switch en.inputMode {
 	case inputASCII:
-		s.WriteString("SKK")
+		s.WriteString("SKK:")
 	case inputHira:
 		s.WriteString("かな")
 	case inputKata:
