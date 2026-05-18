@@ -22,10 +22,7 @@ func (en *Engine) enterZenMode() (string, bool) {
 func (en *Engine) handleConvEnter() (string, bool) {
 	if en.regMode {
 		en.flush()
-		en.inputBuf.Reset()
-		if !en.popConv() {
-			en.regMode = false
-		}
+		en.endReg()
 
 		regWord := en.regBuf.String()
 		en.regBuf.Reset()
@@ -40,6 +37,10 @@ func (en *Engine) handleConvEnter() (string, bool) {
 		if en.regMode {
 			return en.output(true)
 		}
+
+		en.flushReg()
+		en.conv.reset()
+		return en.output(true)
 	}
 
 	en.flush()

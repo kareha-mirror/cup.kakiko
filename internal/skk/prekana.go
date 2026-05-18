@@ -192,13 +192,13 @@ func (en *Engine) handleEnter(r rune) (string, bool) {
 		en.endReg()
 		en.conv.clearCands()
 
-		kanji := en.regBuf.String()
+		regWord := en.regBuf.String()
 		en.regBuf.Reset()
 
-		en.dics.Add(en.conv.stem.String(), kanji)
-		en.dics.AddDiff(en.conv.stem.String(), kanji)
+		en.conv.out.WriteString(regWord)
+		en.dics.Add(en.conv.stem.String(), regWord)
+		en.dics.AddDiff(en.conv.stem.String(), regWord)
 
-		en.conv.out.WriteString(kanji)
 		en.conv.out.WriteString(en.conv.okuri.String())
 		en.conv.stem.Reset()
 		en.conv.okuri.Reset()
@@ -207,7 +207,7 @@ func (en *Engine) handleEnter(r rune) (string, bool) {
 			return en.output(true)
 		}
 
-		en.flush()
+		en.flushReg()
 		en.conv.reset()
 		reg = true
 	}

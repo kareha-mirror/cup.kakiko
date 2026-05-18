@@ -128,12 +128,20 @@ func (en *Engine) flush() {
 	s := strings.Builder{}
 	s.WriteString(en.conv.out.String())
 
-	if en.conv.hasCands() {
+	if en.conv.hasCands() && en.conv.stem.Len() > 0 {
 		s.WriteString(en.conv.cand())
 		en.dics.Add(en.conv.stem.String(), en.conv.cand())
 	} else {
 		s.WriteString(en.conv.trueStem())
 	}
+
+	s.WriteString(en.conv.okuri.String())
+	en.write(s.String())
+}
+
+func (en *Engine) flushReg() {
+	s := strings.Builder{}
+	s.WriteString(en.conv.out.String())
 
 	s.WriteString(en.conv.okuri.String())
 	en.write(s.String())
