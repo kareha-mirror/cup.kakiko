@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"fmt"
 	"os"
@@ -12,7 +13,14 @@ import (
 	"tea.kareha.org/cup/kakiko/internal/skkdic"
 )
 
+const appName = "kakiko"
 const fallbackCommand = "/bin/sh"
+
+//go:embed skk-edic-joyo.txt
+var skkdicJoyo string
+
+//go:embed skk-edic-overlay.txt
+var skkdicOverlay string
 
 func fatal(a ...any) {
 	fmt.Fprintln(os.Stderr, a...)
@@ -45,6 +53,7 @@ func getSKKDiffDicPath(dir string) string {
 
 func main() {
 	configDir := flag.String("d", "", "config directory")
+	joyo := flag.Bool("joyo", false, "joyo mode")
 	flag.Parse()
 
 	if *configDir == "" {
@@ -80,8 +89,13 @@ func main() {
 
 	en := skk.NewEngine()
 
-	builtinDic := skkdic.NewStrDic(skkdicBuiltin)
-	en.AddDic(builtinDic)
+	if !*joyo {
+		overlayDic := skkdic.NewStrDic(skkdicOverlay)
+		en.AddDic(overlayDic)
+	}
+
+	joyoDic := skkdic.NewStrDic(skkdicJoyo)
+	en.AddDic(joyoDic)
 
 	dicPath := getSKKDicPath(*configDir)
 	mainDic := skkdic.NewCDBDic(dicPath)
