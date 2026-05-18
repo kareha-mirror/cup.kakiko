@@ -8,7 +8,7 @@ build:
 
 clean:
 	make -C skk-edic clean
-	rm -f kakiko skk-edic-merge
+	rm -f skk-edic-merge kakiko kakikom
 
 run:
 	go run ./cmd/kakiko
