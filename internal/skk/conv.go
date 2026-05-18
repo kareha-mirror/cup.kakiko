@@ -52,6 +52,15 @@ func (c *conv) reset() {
 	c.clearCands()
 }
 
+func (c *conv) resetReg() {
+	c.mode = convNone
+
+	c.stem.Reset()
+	c.okuri.Reset()
+
+	c.clearCands()
+}
+
 func (c *conv) hasCands() bool {
 	return len(c.cands) > 0
 }

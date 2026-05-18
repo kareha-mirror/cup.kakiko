@@ -115,7 +115,11 @@ func (en *Engine) handleCancel(r rune) (string, bool) {
 	case convStem, convAbbrev:
 		en.inputBuf.Reset()
 		if !en.conv.hasCands() {
-			en.conv.reset()
+			if en.regMode {
+				en.conv.resetReg()
+			} else {
+				en.conv.reset()
+			}
 		} else {
 			en.conv.clearCands()
 		}
