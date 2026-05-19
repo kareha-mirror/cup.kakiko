@@ -122,7 +122,17 @@ func (en *Engine) endReg() {
 	}
 }
 
-func (en *Engine) write(s string) {
+func (en *Engine) writeRune(r rune) {
+	if en.regMode {
+		en.regBuf.WriteRune(r)
+	} else if en.lineMode {
+		en.lineBuf.WriteRune(r)
+	} else {
+		en.out.WriteRune(r)
+	}
+}
+
+func (en *Engine) writeString(s string) {
 	if en.regMode {
 		en.regBuf.WriteString(s)
 	} else if en.lineMode {
@@ -132,25 +142,35 @@ func (en *Engine) write(s string) {
 	}
 }
 
+func (en *Engine) flushPartial() {
+	s := strings.Builder{}
+	s.WriteString(en.conv.out.String())
+
+	s.WriteString(en.conv.okuri.String())
+	en.writeString(s.String())
+}
+
 func (en *Engine) flush() {
 	s := strings.Builder{}
 	s.WriteString(en.conv.out.String())
 
-	if en.conv.hasCands() && en.conv.stem.Len() > 0 {
-		s.WriteString(en.conv.cand())
-		en.dics.Add(en.conv.stem.String(), en.conv.cand())
+	if en.conv.hasCands() {
+		if en.conv.stem.Len() > 0 { // XXX
+			s.WriteString(en.conv.cand())
+			en.dics.Add(en.conv.stem.String(), en.conv.cand())
+		}
 	} else {
 		s.WriteString(en.conv.trueStem())
 	}
 
 	s.WriteString(en.conv.okuri.String())
-	en.write(s.String())
+	en.writeString(s.String())
 }
 
-func (en *Engine) flushReg() {
-	s := strings.Builder{}
-	s.WriteString(en.conv.out.String())
-
-	s.WriteString(en.conv.okuri.String())
-	en.write(s.String())
+func (en *Engine) resetConv() {
+	if en.regMode {
+		en.conv.resetPartial()
+	} else {
+		en.conv.reset()
+	}
 }

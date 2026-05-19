@@ -25,11 +25,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		if key.Rune == 'y' {
 			en.dics.Remove(en.conv.stem.String(), en.conv.cand())
 			en.dics.RemoveDiff(en.conv.stem.String(), en.conv.cand())
-			if en.regMode {
-				en.conv.resetReg()
-			} else {
-				en.conv.reset()
-			}
+			en.resetConv()
 
 			en.deleteMode = false
 			return "", true
@@ -155,7 +151,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	if en.conv.mode == convAbbrev {
 		if en.conv.hasCands() {
 			en.flush()
-			en.conv.reset()
+			en.resetConv()
 			// fallthrough
 		} else {
 			en.conv.stem.WriteRune(r)
@@ -169,8 +165,8 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		if en.conv.mode != convOkuri || ok && tail != 'っ' && tail != 'ッ' {
 			en.dics.Add(en.conv.stem.String(), en.conv.cand())
 
-			en.write(en.conv.cand() + en.conv.okuri.String())
-			en.conv.reset()
+			en.writeString(en.conv.cand() + en.conv.okuri.String())
+			en.resetConv()
 			update = true
 		}
 	}
@@ -207,15 +203,15 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	}
 
 	if r < 'a' || r > 'z' {
-		return en.handleNonAlpha(r)
+		return en.handleNonAlphabet(r)
 	}
 
 	switch r {
 	case 'l':
 		return en.enterASCIIMode()
 	case 'q':
-		return en.changeKanaType()
+		return en.toggleKanaType()
 	}
 
-	return en.handleAlpha(r, update)
+	return en.handleAlphabet(r, update)
 }

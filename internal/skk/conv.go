@@ -42,23 +42,18 @@ func (c *conv) clearCands() {
 	c.index = 0
 }
 
-func (c *conv) reset() {
+func (c *conv) resetPartial() {
 	c.mode = convNone
 
-	c.out.Reset()
 	c.stem.Reset()
 	c.okuri.Reset()
 
 	c.clearCands()
 }
 
-func (c *conv) resetReg() {
-	c.mode = convNone
-
-	c.stem.Reset()
-	c.okuri.Reset()
-
-	c.clearCands()
+func (c *conv) reset() {
+	c.resetPartial()
+	c.out.Reset()
 }
 
 func (c *conv) hasCands() bool {
@@ -69,7 +64,6 @@ func (c *conv) candByIndex(index int) string {
 	if !c.hasCands() {
 		return ""
 	}
-
 	return c.cands[index]
 }
 

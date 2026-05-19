@@ -29,8 +29,7 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 				en.conv.stem.Reset()
 			}
 			en.flush()
-			en.conv.reset()
-			en.conv.mode = convNone
+			en.resetConv()
 			return en.output(true)
 		}
 
@@ -42,7 +41,7 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 			en.conv.clearCands()
 			return en.output(true)
 		} else {
-			en.conv.reset()
+			en.resetConv()
 			en.conv.mode = convNone
 			return en.output(true)
 		}
@@ -103,7 +102,7 @@ func (en *Engine) handleCancel(r rune) (string, bool) {
 	case convOkuri:
 		en.inputBuf.Reset()
 		if !en.conv.hasCands() {
-			en.conv.reset()
+			en.resetConv()
 		} else {
 			en.conv.stem.RemoveTail()
 			en.conv.stem.WriteString(en.conv.okuri.String())
@@ -115,11 +114,7 @@ func (en *Engine) handleCancel(r rune) (string, bool) {
 	case convStem, convAbbrev:
 		en.inputBuf.Reset()
 		if !en.conv.hasCands() {
-			if en.regMode {
-				en.conv.resetReg()
-			} else {
-				en.conv.reset()
-			}
+			en.resetConv()
 		} else {
 			en.conv.clearCands()
 		}
@@ -139,7 +134,7 @@ func (en *Engine) handleCandList(r rune) (string, bool) {
 	en.conv.index = index
 
 	en.flush()
-	en.conv.reset()
+	en.resetConv()
 	return en.output(true)
 }
 
@@ -171,7 +166,7 @@ func (en *Engine) handleLineMode(r rune) (string, bool) {
 func (en *Engine) handleMeta(r rune) (string, bool) {
 	if en.conv.mode == convAbbrev && !en.conv.hasCands() {
 		en.out.WriteString(romaji.HanToZen(en.conv.stem.String()))
-		en.conv.reset()
+		en.resetConv()
 		return en.output(true)
 	}
 
@@ -184,13 +179,11 @@ func (en *Engine) handleMeta(r rune) (string, bool) {
 		en.inputMode = inputHira
 	}
 
-	en.conv.reset()
-
+	en.resetConv()
 	return en.output(true)
 }
 
 func (en *Engine) handleEnter(r rune) (string, bool) {
-	reg := false
 	if en.regMode {
 		en.flush()
 		en.endReg()
@@ -211,9 +204,9 @@ func (en *Engine) handleEnter(r rune) (string, bool) {
 			return en.output(true)
 		}
 
-		en.flushReg()
-		en.conv.reset()
-		reg = true
+		en.flushPartial()
+		en.resetConv()
+		return en.output(true)
 	}
 
 	if en.lineMode && en.lineBuf.Len() > 0 {
@@ -222,48 +215,21 @@ func (en *Engine) handleEnter(r rune) (string, bool) {
 		return en.output(true)
 	}
 
-	if !reg {
-		en.out.WriteRune(r)
-	}
-	return en.output(reg)
+	en.out.WriteRune(r)
+	return en.output(false)
 }
 
 func (en *Engine) handleZen(r rune) (string, bool) {
 	zen, ok := romaji.ToZen[string(r)]
 	if ok {
-		if en.regMode {
-			en.regBuf.WriteString(zen)
-			return en.output(true)
-		} else if en.lineMode {
-			en.lineBuf.WriteString(zen)
-			return en.output(true)
-		} else {
-			en.out.WriteString(zen)
-			return en.output(false)
-		}
+		en.writeString(zen)
 	} else {
-		if en.regMode {
-			en.regBuf.WriteRune(r)
-			return en.output(true)
-		} else if en.lineMode {
-			en.lineBuf.WriteRune(r)
-			return en.output(true)
-		} else {
-			en.out.WriteRune(r)
-			return en.output(false)
-		}
+		en.writeRune(r)
 	}
+	return en.output(en.regMode || en.lineMode)
 }
 
 func (en *Engine) handleRune(r rune) (string, bool) {
-	if en.regMode {
-		en.regBuf.WriteRune(r)
-		return en.output(true)
-	} else if en.lineMode {
-		en.lineBuf.WriteRune(r)
-		return en.output(true)
-	} else {
-		en.out.WriteRune(r)
-		return en.output(false)
-	}
+	en.writeRune(r)
+	return en.output(en.regMode || en.lineMode)
 }

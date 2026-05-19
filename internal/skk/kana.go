@@ -11,11 +11,8 @@ func (en *Engine) enterZenMode() (string, bool) {
 	en.inputMode = inputZen
 	en.inputBuf.Reset()
 
-	if en.conv.mode != convNone {
-		en.flush()
-		en.conv.reset()
-	}
-
+	en.flush()
+	en.resetConv()
 	return en.output(true)
 }
 
@@ -38,13 +35,13 @@ func (en *Engine) handleConvEnter() (string, bool) {
 			return en.output(true)
 		}
 
-		en.flushReg()
-		en.conv.reset()
+		en.flushPartial()
+		en.resetConv()
 		return en.output(true)
 	}
 
 	en.flush()
-	en.conv.reset()
+	en.resetConv()
 	return en.output(true)
 }
 
@@ -52,10 +49,8 @@ func (en *Engine) handleEscape(r rune) (string, bool) {
 	en.inputMode = inputASCII
 	en.inputBuf.Reset()
 
-	if en.conv.mode != convNone {
-		en.flush()
-		en.conv.reset()
-	}
+	en.flush()
+	en.resetConv()
 
 	// XXX regMode?
 
@@ -75,10 +70,9 @@ func (en *Engine) handleControlCode(r rune) (string, bool) {
 }
 
 func (en *Engine) enterAbbrevMode() (string, bool) {
-	if en.conv.hasCands() {
-		en.flush()
-		en.conv.reset()
-	}
+	en.flush()
+	en.resetConv()
+
 	en.conv.mode = convAbbrev
 	return en.output(true)
 }
@@ -146,19 +140,14 @@ func (en *Engine) handleKigou(kigou string, update bool) (string, bool) {
 
 	update = update || en.inputBuf.Len() > 0
 	en.inputBuf.Reset()
-	if en.regMode {
-		en.regBuf.WriteString(kigou)
+	en.writeString(kigou)
+	if en.regMode || en.lineMode {
 		update = true
-	} else if en.lineMode {
-		en.lineBuf.WriteString(kigou)
-		update = true
-	} else {
-		en.out.WriteString(kigou)
 	}
 	return en.output(update)
 }
 
-func (en *Engine) handleNonAlpha(r rune) (string, bool) {
+func (en *Engine) handleNonAlphabet(r rune) (string, bool) {
 	if en.inputBuf.String() == "n" {
 		var nn string
 		if en.inputMode == inputHira {
@@ -184,9 +173,10 @@ func (en *Engine) handleNonAlpha(r rune) (string, bool) {
 		en.conv.out.WriteRune(r)
 	}
 
+	// XXX
 	if en.conv.mode == convNone {
 		en.flush()
-		en.conv.reset()
+		en.resetConv()
 	}
 
 	return en.output(true)
@@ -196,11 +186,8 @@ func (en *Engine) enterASCIIMode() (string, bool) {
 	en.inputMode = inputASCII
 	en.inputBuf.Reset()
 
-	if en.conv.mode != convNone {
-		en.flush()
-		en.conv.reset()
-	}
-
+	en.flush()
+	en.resetConv()
 	return en.output(true)
 }
 
@@ -221,7 +208,7 @@ func vowelOf(kana string) (string, bool) {
 	}
 }
 
-func (en *Engine) changeKanaType() (string, bool) {
+func (en *Engine) toggleKanaType() (string, bool) {
 	if en.conv.mode == convNone {
 		if en.inputMode == inputHira {
 			en.inputMode = inputKata
@@ -248,19 +235,13 @@ func (en *Engine) changeKanaType() (string, bool) {
 			s.WriteString(romaji.KataToHira(en.conv.stem.String()))
 			s.WriteString(romaji.KataToHira(en.conv.okuri.String()))
 		}
-		en.conv.reset()
-		if en.regMode {
-			en.regBuf.WriteString(s.String())
-		} else if en.lineMode {
-			en.lineBuf.WriteString(s.String())
-		} else {
-			en.out.WriteString(s.String())
-		}
+		en.resetConv()
+		en.writeString(s.String())
 		return en.output(true)
 	}
 }
 
-func (en *Engine) handleAlpha(r rune, update bool) (string, bool) {
+func (en *Engine) handleAlphabet(r rune, update bool) (string, bool) {
 	en.inputBuf.WriteRune(r)
 
 	var kana string
@@ -302,13 +283,7 @@ func (en *Engine) handleAlpha(r rune, update bool) (string, bool) {
 
 	if en.conv.mode == convNone {
 		if kana != "" {
-			if en.regMode {
-				en.regBuf.WriteString(kana)
-			} else if en.lineMode {
-				en.lineBuf.WriteString(kana)
-			} else {
-				en.out.WriteString(kana)
-			}
+			en.writeString(kana)
 		}
 		return en.output(true)
 	} else if en.conv.mode == convStem {
