@@ -7,9 +7,30 @@ import (
 	"tea.kareha.org/cup/kakiko/internal/romaji"
 )
 
-func (en *Engine) enterZenMode() (string, bool) {
-	en.inputMode = inputZen
+func (en *Engine) resetKanaInput() {
+	if en.inputBuf.String() == "n" {
+		nn := ""
+		if en.inputMode == inputHira {
+			nn = "ん"
+		} else if en.inputMode == inputKata {
+			nn = "ン"
+		}
+		if en.conv.mode == convOkuri {
+			en.conv.stem.RemoveTail()
+			en.conv.stem.WriteString(nn)
+			en.conv.stem.WriteRune('n')
+		} else if en.conv.mode == convStem || en.regMode {
+			en.conv.stem.WriteString(nn)
+		} else if en.conv.mode == convNone {
+			en.conv.out.WriteString(nn)
+		}
+	}
 	en.inputBuf.Reset()
+}
+
+func (en *Engine) enterZenMode() (string, bool) {
+	en.resetKanaInput()
+	en.inputMode = inputZen
 
 	en.flush()
 	en.resetConv()
@@ -46,8 +67,8 @@ func (en *Engine) handleConvEnter() (string, bool) {
 }
 
 func (en *Engine) handleEscape(r rune) (string, bool) {
+	en.resetKanaInput()
 	en.inputMode = inputASCII
-	en.inputBuf.Reset()
 
 	en.flush()
 	en.resetConv()
@@ -79,14 +100,7 @@ func (en *Engine) enterAbbrevMode() (string, bool) {
 
 func (en *Engine) handleConv() (string, bool) {
 	if !en.conv.hasCands() {
-		if en.inputBuf.String() == "n" {
-			if en.inputMode == inputHira {
-				en.conv.stem.WriteString("ん")
-			} else { // inputKata
-				en.conv.stem.WriteString("ン")
-			}
-		}
-		en.inputBuf.Reset()
+		en.resetKanaInput()
 
 		stem := en.conv.stem.String()
 		stem = romaji.KataToHira(stem)
@@ -148,22 +162,7 @@ func (en *Engine) handleKigou(kigou string, update bool) (string, bool) {
 }
 
 func (en *Engine) handleNonAlphabet(r rune) (string, bool) {
-	if en.inputBuf.String() == "n" {
-		var nn string
-		if en.inputMode == inputHira {
-			nn = "ん"
-		} else if en.inputMode == inputKata {
-			nn = "ン"
-		}
-		if en.conv.mode == convOkuri {
-			en.conv.okuri.WriteString(nn)
-		} else if en.conv.mode == convStem {
-			en.conv.stem.WriteString(nn)
-		} else if en.conv.mode == convNone {
-			en.conv.out.WriteString(nn)
-		}
-	}
-	en.inputBuf.Reset()
+	en.resetKanaInput()
 
 	if en.conv.mode == convOkuri {
 		en.conv.okuri.WriteRune(r)
@@ -173,7 +172,6 @@ func (en *Engine) handleNonAlphabet(r rune) (string, bool) {
 		en.conv.out.WriteRune(r)
 	}
 
-	// XXX
 	if en.conv.mode == convNone {
 		en.flush()
 		en.resetConv()
@@ -183,8 +181,8 @@ func (en *Engine) handleNonAlphabet(r rune) (string, bool) {
 }
 
 func (en *Engine) enterASCIIMode() (string, bool) {
+	en.resetKanaInput()
 	en.inputMode = inputASCII
-	en.inputBuf.Reset()
 
 	en.flush()
 	en.resetConv()
@@ -217,14 +215,7 @@ func (en *Engine) toggleKanaType() (string, bool) {
 		}
 		return en.output(true)
 	} else {
-		if en.inputBuf.String() == "n" {
-			if en.inputMode == inputHira {
-				en.conv.stem.WriteString("ん")
-			} else { // inputKata
-				en.conv.stem.WriteString("ン")
-			}
-		}
-		en.inputBuf.Reset()
+		en.resetKanaInput()
 
 		en.conv.mode = convNone
 		s := strings.Builder{}
