@@ -73,6 +73,10 @@ func (dics *Dics) AddDiff(reading, word string) error {
 	return dics.diff.Add(reading, word)
 }
 
+func (dics *Dics) RemoveDiff(reading, word string) error {
+	return dics.diff.Remove(reading, word)
+}
+
 func (dics *Dics) Finish() error {
 	var uerr, derr error
 	if dics.ud != nil {

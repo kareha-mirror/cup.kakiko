@@ -11,6 +11,16 @@ func (en *Engine) Status() (string, bool) {
 		return en.message, true
 	}
 
+	// delete candidate
+	if en.deleteMode {
+		s := fmt.Sprintf(
+			"%s /%s/ を辞書から削除します。良いですか？(y or n)",
+			en.conv.stem.String(),
+			en.conv.cand(),
+		)
+		return s, false
+	}
+
 	// list of candidates
 	if en.conv.hasCands() && en.conv.index >= candOffset {
 		s := strings.Builder{}
