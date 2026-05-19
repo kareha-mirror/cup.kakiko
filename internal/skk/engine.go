@@ -160,7 +160,7 @@ func (en *Engine) flush() {
 			en.dics.Add(en.conv.stem.String(), en.conv.cand())
 		}
 	} else {
-		s.WriteString(en.conv.trueStem())
+		s.WriteString(en.conv.stemBody())
 	}
 
 	s.WriteString(en.conv.okuri.String())

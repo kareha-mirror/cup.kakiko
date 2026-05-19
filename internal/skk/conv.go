@@ -104,7 +104,7 @@ func (c *conv) advanceMode() {
 	}
 }
 
-func (c *conv) trueStem() string {
+func (c *conv) stemBody() string {
 	if c.mode == convOkuri {
 		stem, ok := c.stem.Substring(0, c.stem.Len()-1)
 		if ok {

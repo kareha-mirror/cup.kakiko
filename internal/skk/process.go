@@ -9,31 +9,12 @@ import (
 )
 
 func (en *Engine) Process(key termi.Key) (string, bool) {
+	// delete candidate
 	if en.deleteMode {
-		if en.message != "" {
-			en.message = ""
-			return "", true
-		}
-		if key.Kind != termi.KeyRune {
-			en.message = "Please answer y or n."
-			return "", true
-		}
-		if key.Rune == 'n' {
-			en.deleteMode = false
-			return "", true
-		}
-		if key.Rune == 'y' {
-			en.dics.Remove(en.conv.stem.String(), en.conv.cand())
-			en.dics.RemoveDiff(en.conv.stem.String(), en.conv.cand())
-			en.resetConv()
-
-			en.deleteMode = false
-			return "", true
-		}
-		en.message = "Please answer y or n."
-		return "", true
+		return en.handleDeleteCand(key)
 	}
 
+	// paste
 	if en.pasteMode {
 		if key.Kind == termi.KeyEndPaste {
 			en.pasteMode = false
@@ -45,7 +26,6 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 		}
 		return en.handleRune(key.Rune)
 	}
-
 	if key.Kind == termi.KeyBeginPaste {
 		en.pasteMode = true
 		return "", false

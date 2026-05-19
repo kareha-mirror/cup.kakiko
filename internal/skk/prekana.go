@@ -3,8 +3,37 @@ package skk
 import (
 	"fmt"
 
+	"tea.kareha.org/cup/termi"
+
 	"tea.kareha.org/cup/kakiko/internal/romaji"
 )
+
+const pleaseAnswer = "Please answer y or n."
+
+func (en *Engine) handleDeleteCand(key termi.Key) (string, bool) {
+	if en.message != "" {
+		en.message = ""
+		return "", true
+	}
+	if key.Kind != termi.KeyRune {
+		en.message = pleaseAnswer
+		return "", true
+	}
+	if key.Rune == 'n' {
+		en.deleteMode = false
+		return "", true
+	}
+	if key.Rune == 'y' {
+		en.dics.Remove(en.conv.stem.String(), en.conv.cand())
+		en.dics.RemoveDiff(en.conv.stem.String(), en.conv.cand())
+		en.resetConv()
+
+		en.deleteMode = false
+		return "", true
+	}
+	en.message = pleaseAnswer
+	return "", true
+}
 
 func (en *Engine) handleBackspace(r rune) (string, bool) {
 	if en.inputBuf.Len() > 0 {

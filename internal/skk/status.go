@@ -14,9 +14,7 @@ func (en *Engine) Status() (string, bool) {
 	// delete candidate
 	if en.deleteMode {
 		s := fmt.Sprintf(
-			"%s /%s/ を辞書から削除します。良いですか？(y or n)",
-			en.conv.stem.String(),
-			en.conv.cand(),
+			"%s /%s/ を削除(y/n)?", en.conv.stem.String(), en.conv.cand(),
 		)
 		return s, false
 	}
@@ -72,7 +70,7 @@ func (en *Engine) Status() (string, bool) {
 	if en.regMode {
 		s.WriteString("[登録]")
 		conv := en.stack[len(en.stack)-1]
-		s.WriteString(conv.trueStem())
+		s.WriteString(conv.stemBody())
 		if conv.mode == convOkuri {
 			s.WriteRune('*')
 		}
@@ -89,7 +87,7 @@ func (en *Engine) Status() (string, bool) {
 			s.WriteString(en.conv.cand())
 		} else {
 			s.WriteRune('▽')
-			s.WriteString(en.conv.trueStem())
+			s.WriteString(en.conv.stemBody())
 		}
 	}
 
