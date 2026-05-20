@@ -212,7 +212,7 @@ func (en *Engine) handleSuper(r rune) (string, bool) {
 		en.inputMode = inputHira
 	}
 
-	en.resetConv()
+	en.conv.reset() // do not use en.resetConv()
 	return en.output(true)
 }
 
