@@ -55,12 +55,9 @@ func (en *Engine) handleConvEnter() (string, bool) {
 		en.conv.stem.Reset()
 		en.conv.okuri.Reset()
 		en.conv.mode = convNone
-		if en.regMode {
-			return en.output(true)
-		}
 
 		en.flushPartial()
-		en.resetConv()
+		en.conv.reset() // do not use en.resetConv()
 		return en.output(true)
 	}
 
