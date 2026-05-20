@@ -167,7 +167,7 @@ func (en *Engine) handleCandList(r rune) (string, bool) {
 	en.conv.index = index
 
 	en.flush()
-	en.resetConv()
+	en.conv.reset() // do not use en.resetConv()
 	return en.output(true)
 }
 
