@@ -63,7 +63,7 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 				en.conv.stem.Reset()
 			}
 			en.flush()
-			en.resetConv()
+			en.conv.reset() // do not use en.resetConv()
 			return en.output(true)
 		}
 
