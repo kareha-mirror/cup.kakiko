@@ -51,6 +51,7 @@ func (en *Engine) handleConvEnter() (string, bool) {
 			en.dics.AddDiff(en.conv.stem.String(), word)
 		}
 
+		en.conv.out.WriteString(en.conv.okuri.String())
 		en.conv.stem.Reset()
 		en.conv.okuri.Reset()
 		en.conv.mode = convNone
