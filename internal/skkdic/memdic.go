@@ -1,6 +1,7 @@
 package skkdic
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -86,6 +87,10 @@ func removeElem(list []string, elem string) []string {
 }
 
 func (d *MemDic) Add(reading, word string) error {
+	if reading == "" || word == "" {
+		return errors.New("reading or word is null string")
+	}
+
 	err := d.ensureLoaded()
 	if err != nil {
 		return err

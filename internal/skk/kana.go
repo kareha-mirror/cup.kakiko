@@ -42,12 +42,14 @@ func (en *Engine) handleConvEnter() (string, bool) {
 		en.flush()
 		en.endReg()
 
-		regWord := en.regBuf.String()
+		word := en.regBuf.String()
 		en.regBuf.Reset()
 
-		en.conv.out.WriteString(regWord)
-		en.dics.Add(en.conv.stem.String(), regWord)
-		en.dics.AddDiff(en.conv.stem.String(), regWord)
+		en.conv.out.WriteString(word)
+		if word != "" {
+			en.dics.Add(en.conv.stem.String(), word)
+			en.dics.AddDiff(en.conv.stem.String(), word)
+		}
 
 		en.conv.stem.Reset()
 		en.conv.okuri.Reset()
@@ -99,21 +101,7 @@ func (en *Engine) enterAbbrevMode() (string, bool) {
 }
 
 func (en *Engine) handleConv() (string, bool) {
-	if !en.conv.hasCands() {
-		en.resetKanaInput()
-
-		stem := en.conv.stem.String()
-		stem = romaji.KataToHira(stem)
-		var err error
-		en.conv.cands, err = en.dics.Lookup(stem)
-		en.conv.index = 0
-		if err != nil {
-			en.message = fmt.Sprintf("%v", err)
-			en.conv.cands = []string{}
-		} else if !en.conv.hasCands() {
-			en.beginReg()
-		}
-	} else {
+	if en.conv.hasCands() {
 		if en.conv.index < candOffset {
 			if en.conv.index+1 < len(en.conv.cands) {
 				en.conv.index++
@@ -126,6 +114,19 @@ func (en *Engine) handleConv() (string, bool) {
 			} else {
 				en.beginReg()
 			}
+		}
+	} else {
+		en.resetKanaInput()
+
+		var err error
+		stem := romaji.KataToHira(en.conv.stem.String())
+		en.conv.cands, err = en.dics.Lookup(stem)
+		en.conv.index = 0
+		if err != nil {
+			en.message = fmt.Sprintf("%v", err)
+			en.conv.cands = []string{}
+		} else if !en.conv.hasCands() {
+			en.beginReg()
 		}
 	}
 	return en.output(true)
@@ -164,11 +165,12 @@ func (en *Engine) handleKigou(kigou string, update bool) (string, bool) {
 func (en *Engine) handleNonAlphabet(r rune) (string, bool) {
 	en.resetKanaInput()
 
-	if en.conv.mode == convOkuri {
+	switch en.conv.mode {
+	case convOkuri:
 		en.conv.okuri.WriteRune(r)
-	} else if en.conv.mode == convStem {
+	case convStem:
 		en.conv.stem.WriteRune(r)
-	} else {
+	default:
 		en.conv.out.WriteRune(r)
 	}
 
@@ -214,22 +216,22 @@ func (en *Engine) toggleKanaType() (string, bool) {
 			en.inputMode = inputHira
 		}
 		return en.output(true)
-	} else {
-		en.resetKanaInput()
-
-		en.conv.mode = convNone
-		s := strings.Builder{}
-		if en.inputMode == inputHira {
-			s.WriteString(romaji.HiraToKata(en.conv.stem.String()))
-			s.WriteString(romaji.HiraToKata(en.conv.okuri.String()))
-		} else { // inputKata
-			s.WriteString(romaji.KataToHira(en.conv.stem.String()))
-			s.WriteString(romaji.KataToHira(en.conv.okuri.String()))
-		}
-		en.resetConv()
-		en.writeString(s.String())
-		return en.output(true)
 	}
+
+	en.resetKanaInput()
+
+	en.conv.mode = convNone
+	s := strings.Builder{}
+	if en.inputMode == inputHira {
+		s.WriteString(romaji.HiraToKata(en.conv.stem.String()))
+		s.WriteString(romaji.HiraToKata(en.conv.okuri.String()))
+	} else { // inputKata
+		s.WriteString(romaji.KataToHira(en.conv.stem.String()))
+		s.WriteString(romaji.KataToHira(en.conv.okuri.String()))
+	}
+	en.resetConv()
+	en.writeString(s.String())
+	return en.output(true)
 }
 
 func (en *Engine) handleAlphabet(r rune, update bool) (string, bool) {
@@ -272,18 +274,19 @@ func (en *Engine) handleAlphabet(r rune, update bool) (string, bool) {
 		}
 	}
 
-	if en.conv.mode == convNone {
+	switch en.conv.mode {
+	case convNone:
 		if kana != "" {
 			en.writeString(kana)
 		}
 		return en.output(true)
-	} else if en.conv.mode == convStem {
+	case convStem:
 		if kana != "" {
 			en.conv.stem.WriteString(kana)
 			en.conv.clearCands()
 		}
 		return en.output(true)
-	} else if en.conv.mode == convOkuri {
+	case convOkuri:
 		vowel, ok := vowelOf(kana)
 		if ok {
 			en.conv.stem.WriteString(vowel)
@@ -314,7 +317,7 @@ func (en *Engine) handleAlphabet(r rune, update bool) (string, bool) {
 			en.beginReg()
 		}
 		return en.output(true)
-	} else {
+	default:
 		en.message = fmt.Sprintf(
 			"Process: invalid conv.mode == %d", en.conv.mode,
 		)

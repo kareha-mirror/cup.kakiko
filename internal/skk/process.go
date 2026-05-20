@@ -1,8 +1,6 @@
 package skk
 
 import (
-	"fmt"
-
 	"tea.kareha.org/cup/termi"
 
 	"tea.kareha.org/cup/kakiko/internal/romaji"
@@ -65,16 +63,17 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	}
 	en.linePass = false
 
+	// special keys: Backspace, Ctrl-G, Ctrl-J
 	switch r {
 	case termi.RuneBackspace, termi.RuneDelete:
 		return en.handleBackspace(r)
 	case '\a': // Ctrl-G
 		return en.handleCancel(r)
 	case '\n': // Ctrl-J
-		return en.handleMeta(r)
+		return en.handleSuper(r)
 	}
 
-	// enter out of conv mode
+	// enter in non-conv mode
 	if r == termi.RuneEnter && en.conv.mode == convNone {
 		return en.handleEnter(r)
 	}
@@ -85,14 +84,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	case inputZen:
 		return en.handleZen(r)
 	}
-
-	// assert: now in Hiragana or Katakana mode
-	if en.inputMode != inputHira && en.inputMode != inputKata {
-		en.message = fmt.Sprintf(
-			"assert: invalid inputMode == %d", en.inputMode,
-		)
-		return en.output(true)
-	}
+	// now in Hira or Kata mode
 
 	switch r {
 	case termi.RuneEnter:

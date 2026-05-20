@@ -69,11 +69,10 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 		if en.conv.stem.RemoveTail() {
 			en.conv.clearCands()
 			return en.output(true)
-		} else {
-			en.resetConv()
-			en.conv.mode = convNone
-			return en.output(true)
 		}
+
+		en.resetConv()
+		return en.output(true)
 	}
 
 	if en.regMode {
@@ -85,7 +84,7 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 			return en.output(true)
 		}
 
-		en.message = "Text is read-only"
+		en.message = "Beginning of buffer"
 		return en.output(true)
 	}
 
@@ -130,22 +129,22 @@ func (en *Engine) handleCancel(r rune) (string, bool) {
 		return en.output(false)
 	case convOkuri:
 		en.inputBuf.Reset()
-		if !en.conv.hasCands() {
-			en.resetConv()
-		} else {
+		if en.conv.hasCands() {
 			en.conv.stem.RemoveTail()
 			en.conv.stem.WriteString(en.conv.okuri.String())
 			en.conv.okuri.Reset()
 			en.conv.clearCands()
 			en.conv.mode = convStem
+		} else {
+			en.resetConv()
 		}
 		return en.output(true)
 	case convStem, convAbbrev:
 		en.inputBuf.Reset()
-		if !en.conv.hasCands() {
-			en.resetConv()
-		} else {
+		if en.conv.hasCands() {
 			en.conv.clearCands()
+		} else {
+			en.resetConv()
 		}
 		return en.output(true)
 	}
@@ -192,7 +191,7 @@ func (en *Engine) handleLineMode(r rune) (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleMeta(r rune) (string, bool) {
+func (en *Engine) handleSuper(r rune) (string, bool) {
 	if en.conv.mode == convAbbrev && !en.conv.hasCands() {
 		en.out.WriteString(romaji.HanToZen(en.conv.stem.String()))
 		en.resetConv()
@@ -218,12 +217,14 @@ func (en *Engine) handleEnter(r rune) (string, bool) {
 		en.endReg()
 		en.conv.clearCands()
 
-		regWord := en.regBuf.String()
+		word := en.regBuf.String()
 		en.regBuf.Reset()
 
-		en.conv.out.WriteString(regWord)
-		en.dics.Add(en.conv.stem.String(), regWord)
-		en.dics.AddDiff(en.conv.stem.String(), regWord)
+		en.conv.out.WriteString(word)
+		if word != "" {
+			en.dics.Add(en.conv.stem.String(), word)
+			en.dics.AddDiff(en.conv.stem.String(), word)
+		}
 
 		en.conv.out.WriteString(en.conv.okuri.String())
 		en.conv.stem.Reset()
