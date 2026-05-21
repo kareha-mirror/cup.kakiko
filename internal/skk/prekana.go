@@ -52,7 +52,7 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 			if en.conv.mode == convOkuri {
 				en.conv.okuri.RemoveTail()
 			} else {
-				if en.regMode {
+				if en.regMode && en.conv.out.Len() < 1 {
 					en.regBuf.WriteString(en.conv.cand())
 					en.regBuf.RemoveTail()
 				} else {
