@@ -2,7 +2,6 @@ package skkdic
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 )
@@ -102,10 +101,16 @@ func (d *MemDic) Add(reading, word string) error {
 	}
 	cands = removeElem(cands, word)
 
-	n := []string{word}
-	n = append(n, cands...)
-	d.table[reading] = fmt.Sprintf("/%s/", strings.Join(n, "/"))
+	buf := strings.Builder{}
+	buf.WriteRune('/')
+	buf.WriteString(escape(word))
+	for _, cand := range cands {
+		buf.WriteRune('/')
+		buf.WriteString(escape(cand))
+	}
+	buf.WriteRune('/')
 
+	d.table[reading] = buf.String()
 	return nil
 }
 
@@ -130,7 +135,13 @@ func (d *MemDic) Remove(reading, word string) error {
 		return nil
 	}
 
-	d.table[reading] = fmt.Sprintf("/%s/", strings.Join(cands, "/"))
+	buf := strings.Builder{}
+	for _, cand := range cands {
+		buf.WriteRune('/')
+		buf.WriteString(escape(cand))
+	}
+	buf.WriteRune('/')
 
+	d.table[reading] = buf.String()
 	return nil
 }

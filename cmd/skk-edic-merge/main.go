@@ -27,5 +27,5 @@ func main() {
 		}
 	}
 
-	skkdic.Save(os.Stdout, m)
+	skkdic.SaveSorted(os.Stdout, m)
 }

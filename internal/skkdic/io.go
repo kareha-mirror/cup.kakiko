@@ -84,7 +84,7 @@ func reverseSortedReadings(table map[string]string) []string {
 }
 
 func sortSeq(seq string) string {
-	cands := strings.Split(seq[1:len(seq)-1], "/")
+	cands := parseSeq(seq)
 	m := map[string]bool{}
 	for _, cand := range cands {
 		m[cand] = true
@@ -94,10 +94,19 @@ func sortSeq(seq string) string {
 		list = append(list, c)
 	}
 	sort.Strings(list)
-	return "/" + strings.Join(list, "/") + "/"
+
+	buf := strings.Builder{}
+	if len(list) > 0 {
+		for _, word := range list {
+			buf.WriteRune('/')
+			buf.WriteString(escape(word))
+		}
+		buf.WriteRune('/')
+	}
+	return buf.String()
 }
 
-func Save(w io.Writer, table map[string]string) error {
+func save(w io.Writer, table map[string]string, sort bool) error {
 	kanji := map[string]string{}
 	okuri := map[string]string{}
 
@@ -118,7 +127,10 @@ func Save(w io.Writer, table map[string]string) error {
 
 	okuriReadings := reverseSortedReadings(okuri)
 	for _, reading := range okuriReadings {
-		seq := sortSeq(okuri[reading])
+		seq := okuri[reading]
+		if sort {
+			seq = sortSeq(seq)
+		}
 		_, err = fmt.Fprintf(w, "%s %s\n", reading, seq)
 		if err != nil {
 			return err
@@ -136,7 +148,10 @@ func Save(w io.Writer, table map[string]string) error {
 
 	kanjiReadings := sortedReadings(kanji)
 	for _, reading := range kanjiReadings {
-		seq := sortSeq(kanji[reading])
+		seq := kanji[reading]
+		if sort {
+			seq = sortSeq(seq)
+		}
 		_, err = fmt.Fprintf(w, "%s %s\n", reading, seq)
 		if err != nil {
 			return err
@@ -144,4 +159,12 @@ func Save(w io.Writer, table map[string]string) error {
 	}
 
 	return nil
+}
+
+func Save(w io.Writer, table map[string]string) error {
+	return save(w, table, false)
+}
+
+func SaveSorted(w io.Writer, table map[string]string) error {
+	return save(w, table, true)
 }
