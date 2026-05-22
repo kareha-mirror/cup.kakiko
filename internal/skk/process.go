@@ -19,12 +19,11 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 			return "", false
 		}
 		if key.Kind != termi.KeyRune {
-			en.pasteMode = false
 			return "", false
 		}
 		return en.handleRune(key.Rune)
 	}
-	if key.Kind == termi.KeyBeginPaste {
+	if key.Kind == termi.KeyBeginPaste && en.regMode {
 		en.pasteMode = true
 		return "", false
 	}
