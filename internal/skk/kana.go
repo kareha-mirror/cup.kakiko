@@ -169,10 +169,14 @@ func (en *Engine) handleNonAlphabet(r rune) (string, bool) {
 	case convStem:
 		en.conv.stem.WriteRune(r)
 	default:
-		en.conv.out.WriteRune(r)
+		if en.regBuf.Len() > 0 {
+			en.regBuf.WriteRune(r)
+		} else {
+			en.conv.out.WriteRune(r)
+		}
 	}
 
-	if en.conv.mode == convNone {
+	if en.conv.mode == convNone && !en.regMode {
 		en.flush()
 		en.resetConv()
 	}
