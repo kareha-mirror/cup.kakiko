@@ -6,6 +6,7 @@ import (
 
 	"tea.kareha.org/cup/termi"
 
+	"tea.kareha.org/cup/kakiko/internal/fep"
 	"tea.kareha.org/cup/kakiko/internal/skkdic"
 )
 
@@ -120,10 +121,18 @@ func (en *Engine) Finish() error {
 	return en.dics.Finish()
 }
 
-func (en *Engine) output(update bool) (string, bool) {
+func (en *Engine) Reload() error {
+	return en.dics.Reload()
+}
+
+func (en *Engine) output(update bool) (string, fep.Cmd) {
 	s := en.out.String()
 	en.out.Reset()
-	return s, update
+	if update {
+		return s, fep.CmdStatus
+	} else {
+		return s, fep.CmdNone
+	}
 }
 
 func (en *Engine) pushConv() {

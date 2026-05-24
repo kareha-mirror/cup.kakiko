@@ -3,10 +3,11 @@ package skk
 import (
 	"tea.kareha.org/cup/termi"
 
+	"tea.kareha.org/cup/kakiko/internal/fep"
 	"tea.kareha.org/cup/kakiko/internal/romaji"
 )
 
-func (en *Engine) Process(key termi.Key) (string, bool) {
+func (en *Engine) Process(key termi.Key) (string, fep.Cmd) {
 	// delete candidate
 	if en.deleteMode {
 		return en.handleDeleteCand(key)
@@ -16,27 +17,27 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	if en.pasteMode {
 		if key.Kind == termi.KeyEndPaste {
 			en.pasteMode = false
-			return "", false
+			return "", fep.CmdNone
 		}
 		if key.Kind != termi.KeyRune {
-			return "", false
+			return "", fep.CmdNone
 		}
 		return en.handleRune(key.Rune)
 	}
 	if key.Kind == termi.KeyBeginPaste && en.regMode {
 		en.pasteMode = true
-		return "", false
+		return "", fep.CmdNone
 	}
 
 	// hide message
 	if en.message != "" {
 		en.message = ""
-		return "", true
+		return "", fep.CmdStatus
 	}
 
 	// pass-through
 	if key.Kind != termi.KeyRune {
-		return key.Raw, false
+		return key.Raw, fep.CmdNone
 	}
 
 	// shortcut
@@ -59,6 +60,9 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	// toggle line buffer mode
 	if r == '\f' { // Ctrl-L
 		return en.handleLineMode(r)
+	}
+	if r == '\a' && en.linePass {
+		return en.handleReload()
 	}
 	en.linePass = false
 
@@ -115,7 +119,7 @@ func (en *Engine) Process(key termi.Key) (string, bool) {
 	// delete candidate
 	if r == 'X' && en.conv.hasCands() {
 		en.deleteMode = true
-		return "", true
+		return "", fep.CmdStatus
 	}
 
 	// handle abbrev

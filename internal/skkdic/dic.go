@@ -9,6 +9,7 @@ type UserDic interface {
 	Dic
 	Add(reading, word string) error
 	Remove(reading, word string) error
+	Reload() error
 }
 
 type Dics struct {
@@ -90,6 +91,18 @@ func (dics *Dics) Finish() error {
 	}
 	if derr != nil {
 		return derr
+	}
+	return nil
+}
+
+func (dics *Dics) Reload() error {
+	err := dics.ud.Reload()
+	if err != nil {
+		return err
+	}
+	err = dics.diff.Reload()
+	if err != nil {
+		return err
 	}
 	return nil
 }

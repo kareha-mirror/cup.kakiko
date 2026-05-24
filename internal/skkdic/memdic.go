@@ -110,11 +110,11 @@ func (d *MemDic) Finish() error {
 	if err != nil {
 		return err
 	}
-	err = os.Rename(temp, d.path)
+	err = Save(w, d.table)
 	if err != nil {
 		return err
 	}
-	return Save(w, d.table)
+	return os.Rename(temp, d.path)
 }
 
 func (d *MemDic) Lookup(reading string) ([]string, error) {
@@ -208,5 +208,17 @@ func (d *MemDic) Remove(reading, word string) error {
 	buf.WriteRune('/')
 
 	d.table[reading] = buf.String()
+	return nil
+}
+
+func (d *MemDic) Reload() error {
+	err := d.Finish()
+	if err != nil {
+		return err
+	}
+
+	d.table = map[string]string{}
+	d.loaded = false
+	d.removed = map[string]bool{}
 	return nil
 }

@@ -5,23 +5,24 @@ import (
 
 	"tea.kareha.org/cup/termi"
 
+	"tea.kareha.org/cup/kakiko/internal/fep"
 	"tea.kareha.org/cup/kakiko/internal/romaji"
 )
 
 const pleaseAnswer = "Please answer y or n."
 
-func (en *Engine) handleDeleteCand(key termi.Key) (string, bool) {
+func (en *Engine) handleDeleteCand(key termi.Key) (string, fep.Cmd) {
 	if en.message != "" {
 		en.message = ""
-		return "", true
+		return "", fep.CmdStatus
 	}
 	if key.Kind != termi.KeyRune {
 		en.message = pleaseAnswer
-		return "", true
+		return "", fep.CmdStatus
 	}
 	if key.Rune == 'n' {
 		en.deleteMode = false
-		return "", true
+		return "", fep.CmdStatus
 	}
 	if key.Rune == 'y' {
 		en.dics.Remove(en.conv.stem.String(), en.conv.cand())
@@ -29,13 +30,13 @@ func (en *Engine) handleDeleteCand(key termi.Key) (string, bool) {
 		en.resetConv()
 
 		en.deleteMode = false
-		return "", true
+		return "", fep.CmdStatus
 	}
 	en.message = pleaseAnswer
-	return "", true
+	return "", fep.CmdStatus
 }
 
-func (en *Engine) handleBackspace(r rune) (string, bool) {
+func (en *Engine) handleBackspace(r rune) (string, fep.Cmd) {
 	if en.inputBuf.Len() > 0 {
 		en.inputBuf.Reset()
 		if en.conv.mode == convOkuri {
@@ -101,7 +102,7 @@ func (en *Engine) handleBackspace(r rune) (string, bool) {
 	return en.output(false)
 }
 
-func (en *Engine) handleCancel(r rune) (string, bool) {
+func (en *Engine) handleCancel(r rune) (string, fep.Cmd) {
 	switch en.conv.mode {
 	default: //case convNone:
 		if en.regMode {
@@ -155,7 +156,7 @@ func (en *Engine) handleCancel(r rune) (string, bool) {
 	}
 }
 
-func (en *Engine) handleCandList(r rune) (string, bool) {
+func (en *Engine) handleCandList(r rune) (string, fep.Cmd) {
 	index := en.conv.keyToIndex(r)
 	if index < 0 {
 		en.message = fmt.Sprintf(
@@ -171,7 +172,7 @@ func (en *Engine) handleCandList(r rune) (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleLineMode(r rune) (string, bool) {
+func (en *Engine) handleLineMode(r rune) (string, fep.Cmd) {
 	if en.regMode {
 		en.out.WriteRune(r)
 		return en.output(true)
@@ -196,7 +197,15 @@ func (en *Engine) handleLineMode(r rune) (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleSuper(r rune) (string, bool) {
+func (en *Engine) handleReload() (string, fep.Cmd) {
+	en.message = "Reloaded user dictionary."
+	en.lineMode = false
+	en.linePass = false
+	s, _ := en.output(true)
+	return s, fep.CmdReload
+}
+
+func (en *Engine) handleSuper(r rune) (string, fep.Cmd) {
 	if en.conv.mode == convAbbrev && !en.conv.hasCands() {
 		en.out.WriteString(romaji.HanToZen(en.conv.stem.String()))
 		en.resetConv()
@@ -216,7 +225,7 @@ func (en *Engine) handleSuper(r rune) (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleEnter(r rune) (string, bool) {
+func (en *Engine) handleEnter(r rune) (string, fep.Cmd) {
 	if en.regMode {
 		en.flush()
 		en.endReg()
@@ -254,7 +263,7 @@ func (en *Engine) handleEnter(r rune) (string, bool) {
 	return en.output(false)
 }
 
-func (en *Engine) handleZen(r rune) (string, bool) {
+func (en *Engine) handleZen(r rune) (string, fep.Cmd) {
 	zen, ok := romaji.ToZen[string(r)]
 	if ok {
 		en.writeString(zen)
@@ -264,7 +273,7 @@ func (en *Engine) handleZen(r rune) (string, bool) {
 	return en.output(en.regMode || en.lineMode)
 }
 
-func (en *Engine) handleRune(r rune) (string, bool) {
+func (en *Engine) handleRune(r rune) (string, fep.Cmd) {
 	en.writeRune(r)
 	return en.output(en.regMode || en.lineMode)
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"tea.kareha.org/cup/kakiko/internal/fep"
 	"tea.kareha.org/cup/kakiko/internal/romaji"
 )
 
@@ -28,7 +29,7 @@ func (en *Engine) resetKanaInput() {
 	en.inputBuf.Reset()
 }
 
-func (en *Engine) enterZenMode() (string, bool) {
+func (en *Engine) enterZenMode() (string, fep.Cmd) {
 	en.resetKanaInput()
 	en.inputMode = inputZen
 
@@ -37,7 +38,7 @@ func (en *Engine) enterZenMode() (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleConvEnter() (string, bool) {
+func (en *Engine) handleConvEnter() (string, fep.Cmd) {
 	if en.regMode {
 		en.flush()
 		en.endReg()
@@ -66,7 +67,7 @@ func (en *Engine) handleConvEnter() (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleEscape(r rune) (string, bool) {
+func (en *Engine) handleEscape(r rune) (string, fep.Cmd) {
 	en.resetKanaInput()
 	en.inputMode = inputASCII
 
@@ -85,12 +86,12 @@ func (en *Engine) handleEscape(r rune) (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleControlCode(r rune) (string, bool) {
+func (en *Engine) handleControlCode(r rune) (string, fep.Cmd) {
 	en.out.WriteRune(r)
 	return en.output(false)
 }
 
-func (en *Engine) enterAbbrevMode() (string, bool) {
+func (en *Engine) enterAbbrevMode() (string, fep.Cmd) {
 	en.flush()
 	en.resetConv()
 
@@ -98,7 +99,7 @@ func (en *Engine) enterAbbrevMode() (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleConv() (string, bool) {
+func (en *Engine) handleConv() (string, fep.Cmd) {
 	if en.conv.hasCands() {
 		if en.conv.index < candOffset {
 			if en.conv.index+1 < len(en.conv.cands) {
@@ -130,7 +131,7 @@ func (en *Engine) handleConv() (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleConvRev() (string, bool) {
+func (en *Engine) handleConvRev() (string, fep.Cmd) {
 	if en.conv.index > candOffset {
 		en.conv.index -= len(candKeys)
 	} else {
@@ -143,7 +144,7 @@ func (en *Engine) handleConvRev() (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleKigou(kigou string, update bool) (string, bool) {
+func (en *Engine) handleKigou(kigou string, update bool) (string, fep.Cmd) {
 	if en.conv.mode != convNone && kigou == "ー" {
 		if !en.conv.hasCands() {
 			en.conv.stem.WriteString(kigou)
@@ -160,7 +161,7 @@ func (en *Engine) handleKigou(kigou string, update bool) (string, bool) {
 	return en.output(update)
 }
 
-func (en *Engine) handleNonAlphabet(r rune) (string, bool) {
+func (en *Engine) handleNonAlphabet(r rune) (string, fep.Cmd) {
 	en.resetKanaInput()
 
 	switch en.conv.mode {
@@ -184,7 +185,7 @@ func (en *Engine) handleNonAlphabet(r rune) (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) enterASCIIMode() (string, bool) {
+func (en *Engine) enterASCIIMode() (string, fep.Cmd) {
 	en.resetKanaInput()
 	en.inputMode = inputASCII
 
@@ -210,7 +211,7 @@ func vowelOf(kana string) (string, bool) {
 	}
 }
 
-func (en *Engine) toggleKanaType() (string, bool) {
+func (en *Engine) toggleKanaType() (string, fep.Cmd) {
 	if en.conv.mode == convNone {
 		if en.inputMode == inputHira {
 			en.inputMode = inputKata
@@ -236,7 +237,7 @@ func (en *Engine) toggleKanaType() (string, bool) {
 	return en.output(true)
 }
 
-func (en *Engine) handleAlphabet(r rune, update bool) (string, bool) {
+func (en *Engine) handleAlphabet(r rune, update bool) (string, fep.Cmd) {
 	en.inputBuf.WriteRune(r)
 
 	var kana string

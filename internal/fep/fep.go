@@ -16,10 +16,19 @@ import (
 
 const bufferSize = 1024
 
+type Cmd int
+
+const (
+	CmdNone = iota
+	CmdStatus
+	CmdReload
+)
+
 type Engine interface {
 	Init(dir string) error
 	Finish() error
-	Process(key termi.Key) (string, bool)
+	Reload() error
+	Process(key termi.Key) (string, Cmd)
 	Status() (string, bool)
 }
 
@@ -171,14 +180,18 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 	go func() {
 		for {
 			key := termi.ReadKey()
-			processed, update := en.Process(key)
+			processed, cmd := en.Process(key)
 			if processed != "" {
 				err = writeStringAll(f, processed)
 				if err != nil {
 					return
 				}
 			}
-			if update {
+			switch cmd {
+			case CmdStatus:
+				fep.drawStatus()
+			case CmdReload:
+				fep.en.Reload()
 				fep.drawStatus()
 			}
 		}
@@ -215,6 +228,16 @@ func (fep *FEP) Finish() error {
 
 	termi.RemoveEscapeListener(fep.listener)
 	reset()
+	return err
+}
+
+func (fep *FEP) Reload() error {
+	err := lock(fep.dir)
+	if err != nil {
+		return err
+	}
+	err = fep.en.Reload()
+	unlock(fep.dir)
 	return err
 }
 
