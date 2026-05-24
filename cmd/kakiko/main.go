@@ -37,10 +37,19 @@ func getConfigDir() string {
 func main() {
 	configDir := flag.String("d", "", "config directory")
 	joyo := flag.Bool("joyo", false, "joyo mode")
+	unlock := flag.Bool("unlock", false, "unlock")
 	flag.Parse()
 
 	if *configDir == "" {
 		*configDir = getConfigDir()
+	}
+
+	if *unlock {
+		err := fep.Unlock(*configDir)
+		if err != nil {
+			fatal(err)
+		}
+		return
 	}
 
 	args := flag.Args()

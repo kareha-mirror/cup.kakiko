@@ -91,17 +91,9 @@ func lock(dir string) error {
 	return fmt.Errorf("cannot create lock")
 }
 
-func unlock(dir string) error {
+func Unlock(dir string) error {
 	path := getLockPath(dir)
-	for i := 0; i < 8; i++ {
-		err := os.Remove(path)
-		if err == nil {
-			return nil
-		}
-		d, _ := time.ParseDuration("1s")
-		time.Sleep(d)
-	}
-	return fmt.Errorf("cannot remove lock")
+	return os.Remove(path)
 }
 
 func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
@@ -169,7 +161,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 		return nil, err
 	}
 	err = en.Init(dir)
-	unlock(dir)
+	Unlock(dir)
 	if err != nil {
 		reset()
 		return nil, err
@@ -223,7 +215,7 @@ func (fep *FEP) Finish() error {
 	err := lock(fep.dir)
 	if err == nil {
 		err = fep.en.Finish()
-		unlock(fep.dir)
+		Unlock(fep.dir)
 	}
 
 	termi.RemoveEscapeListener(fep.listener)
@@ -237,7 +229,7 @@ func (fep *FEP) sync() error {
 		return err
 	}
 	err = fep.en.Sync()
-	unlock(fep.dir)
+	Unlock(fep.dir)
 	return err
 }
 
