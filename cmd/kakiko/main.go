@@ -38,6 +38,7 @@ func main() {
 	configDir := flag.String("d", "", "config directory")
 	joyo := flag.Bool("joyo", false, "joyo mode")
 	unlock := flag.Bool("unlock", false, "unlock")
+	download := flag.Bool("download", false, "download dictionary")
 	flag.Parse()
 
 	if *configDir == "" {
@@ -46,6 +47,14 @@ func main() {
 
 	if *unlock {
 		err := fep.Unlock(*configDir)
+		if err != nil {
+			fatal(err)
+		}
+		return
+	}
+
+	if *download {
+		err := downloadDictionary(*configDir)
 		if err != nil {
 			fatal(err)
 		}
