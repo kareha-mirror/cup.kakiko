@@ -8,17 +8,19 @@ import (
 )
 
 type MemDic struct {
-	path   string
-	date   time.Time
-	table  map[string]string
-	loaded bool
+	path    string
+	date    time.Time
+	table   map[string]string
+	loaded  bool
+	removed map[string]bool
 }
 
 func NewMemDic(path string) *MemDic {
 	return &MemDic{
-		path:   path,
-		table:  map[string]string{},
-		loaded: false,
+		path:    path,
+		table:   map[string]string{},
+		loaded:  false,
+		removed: map[string]bool{},
 	}
 }
 
@@ -94,7 +96,10 @@ func (d *MemDic) Finish() error {
 					break
 				}
 				if !found {
-					d.Add(reading, cand)
+					_, ok := d.removed[reading+" "+cand]
+					if !ok {
+						d.Add(reading, cand)
+					}
 				}
 			}
 		}
@@ -166,6 +171,9 @@ func (d *MemDic) Add(reading, word string) error {
 	buf.WriteRune('/')
 
 	d.table[reading] = buf.String()
+
+	delete(d.removed, reading+" "+word)
+
 	return nil
 }
 
@@ -184,6 +192,8 @@ func (d *MemDic) Remove(reading, word string) error {
 	}
 
 	cands = removeElem(cands, word)
+
+	d.removed[reading+" "+word] = true
 
 	if len(cands) < 1 {
 		delete(d.table, reading)
