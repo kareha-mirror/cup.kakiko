@@ -1,13 +1,15 @@
 package skkdic
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 type MemDic struct {
 	path   string
+	date   time.Time
 	table  map[string]string
 	loaded bool
 }
@@ -41,8 +43,32 @@ func (d *MemDic) ensureLoaded() error {
 		return err
 	}
 
+	d.date = time.Now()
 	d.loaded = true
 	return nil
+}
+
+func (d *MemDic) loadOld() (map[string]string, error) {
+	info, err := os.Stat(d.path)
+	if err != nil {
+		return nil, err
+	}
+	if !info.ModTime().After(d.date) {
+		return nil, fmt.Errorf("not modified")
+	}
+
+	r, err := os.Open(d.path)
+	if err != nil {
+		return nil, err
+	}
+
+	table := map[string]string{}
+	err = Load(r, table)
+	if err != nil {
+		return nil, err
+	}
+
+	return table, nil
 }
 
 func (d *MemDic) Finish() error {
@@ -50,7 +76,36 @@ func (d *MemDic) Finish() error {
 		return nil
 	}
 
-	w, err := os.Create(d.path)
+	table, err := d.loadOld()
+	if err == nil {
+		for reading, seq := range table {
+			cands := parseSeq(seq)
+			mycands, err := d.Lookup(reading)
+			if err != nil {
+				mycands = []string{}
+			}
+			for i := len(cands) - 1; i >= 0; i-- {
+				cand := cands[i]
+				found := false
+				for _, mycand := range mycands {
+					if cand == mycand {
+						found = true
+					}
+					break
+				}
+				if !found {
+					d.Add(reading, cand)
+				}
+			}
+		}
+	}
+
+	temp := d.path + ".temp"
+	w, err := os.Create(temp)
+	if err != nil {
+		return err
+	}
+	err = os.Rename(temp, d.path)
 	if err != nil {
 		return err
 	}
@@ -87,7 +142,7 @@ func removeElem(list []string, elem string) []string {
 
 func (d *MemDic) Add(reading, word string) error {
 	if reading == "" || word == "" {
-		return errors.New("reading or word is null string")
+		return fmt.Errorf("reading or word is null string")
 	}
 
 	err := d.ensureLoaded()

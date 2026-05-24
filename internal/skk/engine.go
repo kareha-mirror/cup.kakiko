@@ -1,6 +1,7 @@
 package skk
 
 import (
+	"path/filepath"
 	"strings"
 
 	"tea.kareha.org/cup/termi"
@@ -41,9 +42,17 @@ type Engine struct {
 	out strings.Builder
 }
 
-func NewEngine() *Engine {
+func NewEngine(dics []string) *Engine {
+	d := skkdic.Dics{}
+	for _, dic := range dics {
+		if dic == "" {
+			continue
+		}
+		d.AddDic(skkdic.NewStrDic(dic))
+	}
+
 	return &Engine{
-		dics: skkdic.Dics{},
+		dics: d,
 
 		inputMode: inputASCII,
 		inputBuf:  termi.RuneBuf{},
@@ -79,7 +88,31 @@ func (en *Engine) SetDiffDic(dic skkdic.UserDic) {
 	en.dics.SetDiffDic(dic)
 }
 
-func (en *Engine) Init() error {
+func getSKKDicPath(dir string) string {
+	return filepath.Join(dir, "skk-edic-legacy-l.cdb")
+}
+
+func getSKKUserDicPath(dir string) string {
+	return filepath.Join(dir, "skk-edic-user.txt")
+}
+
+func getSKKDiffDicPath(dir string) string {
+	return filepath.Join(dir, "skk-edic-diff.txt")
+}
+
+func (en *Engine) Init(dir string) error {
+	dicPath := getSKKDicPath(dir)
+	mainDic := skkdic.NewCDBDic(dicPath)
+	en.AddDic(mainDic)
+
+	userDicPath := getSKKUserDicPath(dir)
+	userDic := skkdic.NewMemDic(userDicPath)
+	en.SetUserDic(userDic)
+
+	diffDicPath := getSKKDiffDicPath(dir)
+	diffDic := skkdic.NewMemDic(diffDicPath)
+	en.SetDiffDic(diffDic)
+
 	return nil
 }
 

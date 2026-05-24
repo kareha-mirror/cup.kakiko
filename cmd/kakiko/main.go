@@ -10,7 +10,6 @@ import (
 
 	"tea.kareha.org/cup/kakiko/internal/fep"
 	"tea.kareha.org/cup/kakiko/internal/skk"
-	"tea.kareha.org/cup/kakiko/internal/skkdic"
 )
 
 const appName = "kakiko"
@@ -33,22 +32,6 @@ func getConfigDir() string {
 		fatal(err)
 	}
 	return filepath.Join(dir, appName)
-}
-
-func getConfigPath(dir string) string {
-	return filepath.Join(dir, appName+".yaml")
-}
-
-func getSKKDicPath(dir string) string {
-	return filepath.Join(dir, "skk-edic-legacy-l.cdb")
-}
-
-func getSKKUserDicPath(dir string) string {
-	return filepath.Join(dir, "skk-edic-user.txt")
-}
-
-func getSKKDiffDicPath(dir string) string {
-	return filepath.Join(dir, "skk-edic-diff.txt")
 }
 
 func main() {
@@ -77,39 +60,14 @@ func main() {
 	}
 	var c = exec.Command(command, arguments...)
 
-	var cfg *fep.Config
-	cfgPath := getConfigPath(*configDir)
-	_, err := os.Stat(cfgPath)
-	if err != nil {
-		cfg = fep.DefaultConfig()
-		fep.SaveConfig(cfgPath, cfg)
-	} else {
-		cfg = fep.LoadConfig(cfgPath)
-	}
-
-	en := skk.NewEngine()
-
+	dics := []string{}
 	if !*joyo {
-		overlayDic := skkdic.NewStrDic(skkdicOverlay)
-		en.AddDic(overlayDic)
+		dics = append(dics, skkdicOverlay)
 	}
+	dics = append(dics, skkdicJoyo)
+	en := skk.NewEngine(dics)
 
-	joyoDic := skkdic.NewStrDic(skkdicJoyo)
-	en.AddDic(joyoDic)
-
-	dicPath := getSKKDicPath(*configDir)
-	mainDic := skkdic.NewCDBDic(dicPath)
-	en.AddDic(mainDic)
-
-	userDicPath := getSKKUserDicPath(*configDir)
-	userDic := skkdic.NewMemDic(userDicPath)
-	en.SetUserDic(userDic)
-
-	diffDicPath := getSKKDiffDicPath(*configDir)
-	diffDic := skkdic.NewMemDic(diffDicPath)
-	en.SetDiffDic(diffDic)
-
-	f, err := fep.Init(cfg, en, c)
+	f, err := fep.Init(*configDir, en, c)
 	if err != nil {
 		fatal(err)
 	}

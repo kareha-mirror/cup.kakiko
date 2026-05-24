@@ -1,10 +1,13 @@
 package fep
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/creack/pty"
 
@@ -14,13 +17,14 @@ import (
 const bufferSize = 1024
 
 type Engine interface {
-	Init() error
+	Init(dir string) error
 	Finish() error
 	Process(key termi.Key) (string, bool)
 	Status() (string, bool)
 }
 
 type FEP struct {
+	dir     string
 	cfg     *Config
 	fgColor termi.Color
 	bgColor termi.Color
@@ -57,7 +61,51 @@ func writeStringAll(f *os.File, s string) error {
 	return nil
 }
 
-func Init(cfg *Config, en Engine, c *exec.Cmd) (*FEP, error) {
+func getConfigPath(dir string) string {
+	return filepath.Join(dir, "fep.yaml")
+}
+
+func getLockPath(dir string) string {
+	return filepath.Join(dir, "lock")
+}
+
+func lock(dir string) error {
+	path := getLockPath(dir)
+	for i := 0; i < 8; i++ {
+		err := os.Mkdir(path, 0777)
+		if err == nil {
+			return nil
+		}
+		d, _ := time.ParseDuration("1s")
+		time.Sleep(d)
+	}
+	return fmt.Errorf("cannot create lock")
+}
+
+func unlock(dir string) error {
+	path := getLockPath(dir)
+	for i := 0; i < 8; i++ {
+		err := os.Remove(path)
+		if err == nil {
+			return nil
+		}
+		d, _ := time.ParseDuration("1s")
+		time.Sleep(d)
+	}
+	return fmt.Errorf("cannot remove lock")
+}
+
+func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
+	var cfg *Config
+	cfgPath := getConfigPath(dir)
+	_, err := os.Stat(cfgPath)
+	if err != nil {
+		cfg = DefaultConfig()
+		SaveConfig(cfgPath, cfg)
+	} else {
+		cfg = LoadConfig(cfgPath)
+	}
+
 	fgColor, err := termi.ParseColor(cfg.FgColor)
 	if err != nil {
 		return nil, err
@@ -74,6 +122,7 @@ func Init(cfg *Config, en Engine, c *exec.Cmd) (*FEP, error) {
 	}
 
 	fep := &FEP{
+		dir:     dir,
 		cfg:     cfg,
 		fgColor: fgColor,
 		bgColor: bgColor,
@@ -105,11 +154,18 @@ func Init(cfg *Config, en Engine, c *exec.Cmd) (*FEP, error) {
 	termi.HomeCursor()
 	termi.Raw()
 
-	err = en.Init()
+	err = lock(dir)
 	if err != nil {
 		reset()
 		return nil, err
 	}
+	err = en.Init(dir)
+	unlock(dir)
+	if err != nil {
+		reset()
+		return nil, err
+	}
+
 	fep.drawStatus()
 
 	go func() {
@@ -151,7 +207,12 @@ func reset() {
 }
 
 func (fep *FEP) Finish() error {
-	err := fep.en.Finish()
+	err := lock(fep.dir)
+	if err == nil {
+		err = fep.en.Finish()
+		unlock(fep.dir)
+	}
+
 	termi.RemoveEscapeListener(fep.listener)
 	reset()
 	return err
