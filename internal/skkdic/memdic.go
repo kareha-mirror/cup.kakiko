@@ -211,7 +211,7 @@ func (d *MemDic) Remove(reading, word string) error {
 	return nil
 }
 
-func (d *MemDic) Reload() error {
+func (d *MemDic) Sync() error {
 	err := d.Finish()
 	if err != nil {
 		return err

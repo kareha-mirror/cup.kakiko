@@ -121,15 +121,15 @@ func (en *Engine) Finish() error {
 	return en.dics.Finish()
 }
 
-func (en *Engine) Reload() error {
-	return en.dics.Reload()
+func (en *Engine) Sync() error {
+	return en.dics.Sync()
 }
 
 func (en *Engine) output(update bool) (string, fep.Cmd) {
 	s := en.out.String()
 	en.out.Reset()
 	if update {
-		return s, fep.CmdStatus
+		return s, fep.CmdDraw
 	} else {
 		return s, fep.CmdNone
 	}

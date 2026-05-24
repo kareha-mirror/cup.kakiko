@@ -14,15 +14,15 @@ const pleaseAnswer = "Please answer y or n."
 func (en *Engine) handleDeleteCand(key termi.Key) (string, fep.Cmd) {
 	if en.message != "" {
 		en.message = ""
-		return "", fep.CmdStatus
+		return "", fep.CmdDraw
 	}
 	if key.Kind != termi.KeyRune {
 		en.message = pleaseAnswer
-		return "", fep.CmdStatus
+		return "", fep.CmdDraw
 	}
 	if key.Rune == 'n' {
 		en.deleteMode = false
-		return "", fep.CmdStatus
+		return "", fep.CmdDraw
 	}
 	if key.Rune == 'y' {
 		en.dics.Remove(en.conv.stem.String(), en.conv.cand())
@@ -30,10 +30,10 @@ func (en *Engine) handleDeleteCand(key termi.Key) (string, fep.Cmd) {
 		en.resetConv()
 
 		en.deleteMode = false
-		return "", fep.CmdStatus
+		return "", fep.CmdDraw
 	}
 	en.message = pleaseAnswer
-	return "", fep.CmdStatus
+	return "", fep.CmdDraw
 }
 
 func (en *Engine) handleBackspace(r rune) (string, fep.Cmd) {
@@ -197,12 +197,12 @@ func (en *Engine) handleLineMode(r rune) (string, fep.Cmd) {
 	return en.output(true)
 }
 
-func (en *Engine) handleReload() (string, fep.Cmd) {
-	en.message = "Reloaded user dictionary."
+func (en *Engine) handleSync() (string, fep.Cmd) {
+	en.message = "User dictionaries synchronized."
 	en.lineMode = false
 	en.linePass = false
 	s, _ := en.output(true)
-	return s, fep.CmdReload
+	return s, fep.CmdSync
 }
 
 func (en *Engine) handleSuper(r rune) (string, fep.Cmd) {

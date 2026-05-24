@@ -32,7 +32,7 @@ func (en *Engine) Process(key termi.Key) (string, fep.Cmd) {
 	// hide message
 	if en.message != "" {
 		en.message = ""
-		return "", fep.CmdStatus
+		return "", fep.CmdDraw
 	}
 
 	// pass-through
@@ -62,7 +62,7 @@ func (en *Engine) Process(key termi.Key) (string, fep.Cmd) {
 		return en.handleLineMode(r)
 	}
 	if r == '\a' && en.linePass {
-		return en.handleReload()
+		return en.handleSync()
 	}
 	en.linePass = false
 
@@ -119,7 +119,7 @@ func (en *Engine) Process(key termi.Key) (string, fep.Cmd) {
 	// delete candidate
 	if r == 'X' && en.conv.hasCands() {
 		en.deleteMode = true
-		return "", fep.CmdStatus
+		return "", fep.CmdDraw
 	}
 
 	// handle abbrev

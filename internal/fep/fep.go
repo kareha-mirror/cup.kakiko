@@ -20,16 +20,16 @@ type Cmd int
 
 const (
 	CmdNone = iota
-	CmdStatus
-	CmdReload
+	CmdDraw
+	CmdSync
 )
 
 type Engine interface {
 	Init(dir string) error
 	Finish() error
-	Reload() error
 	Process(key termi.Key) (string, Cmd)
 	Status() (string, bool)
+	Sync() error
 }
 
 type FEP struct {
@@ -175,7 +175,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 		return nil, err
 	}
 
-	fep.drawStatus()
+	fep.draw()
 
 	go func() {
 		for {
@@ -188,11 +188,11 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 				}
 			}
 			switch cmd {
-			case CmdStatus:
-				fep.drawStatus()
-			case CmdReload:
-				fep.en.Reload()
-				fep.drawStatus()
+			case CmdDraw:
+				fep.draw()
+			case CmdSync:
+				fep.sync()
+				fep.draw()
 			}
 		}
 	}()
@@ -203,7 +203,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 
 	listener := func(esc bool) {
 		fep.esc = esc
-		fep.drawStatus()
+		fep.draw()
 	}
 	fep.listener = termi.EscapeListener(&listener)
 	termi.AddEscapeListener(fep.listener)
@@ -231,17 +231,17 @@ func (fep *FEP) Finish() error {
 	return err
 }
 
-func (fep *FEP) Reload() error {
+func (fep *FEP) sync() error {
 	err := lock(fep.dir)
 	if err != nil {
 		return err
 	}
-	err = fep.en.Reload()
+	err = fep.en.Sync()
 	unlock(fep.dir)
 	return err
 }
 
-func (fep *FEP) drawStatus() {
+func (fep *FEP) draw() {
 	w, h := termi.Size()
 	termi.SaveCursor()
 	termi.HideCursor()

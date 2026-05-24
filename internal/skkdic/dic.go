@@ -9,7 +9,7 @@ type UserDic interface {
 	Dic
 	Add(reading, word string) error
 	Remove(reading, word string) error
-	Reload() error
+	Sync() error
 }
 
 type Dics struct {
@@ -95,12 +95,12 @@ func (dics *Dics) Finish() error {
 	return nil
 }
 
-func (dics *Dics) Reload() error {
-	err := dics.ud.Reload()
+func (dics *Dics) Sync() error {
+	err := dics.ud.Sync()
 	if err != nil {
 		return err
 	}
-	err = dics.diff.Reload()
+	err = dics.diff.Sync()
 	if err != nil {
 		return err
 	}
