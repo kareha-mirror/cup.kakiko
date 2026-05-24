@@ -58,12 +58,12 @@ func writeStringAll(f *os.File, s string) error {
 }
 
 func Init(cfg *Config, en Engine, c *exec.Cmd) (*FEP, error) {
-	fgColor, err := termi.ParseHexColor(cfg.FgColor)
+	fgColor, err := termi.ParseColor(cfg.FgColor)
 	if err != nil {
 		return nil, err
 	}
 
-	bgColor, err := termi.ParseHexColor(cfg.BgColor)
+	bgColor, err := termi.ParseColor(cfg.BgColor)
 	if err != nil {
 		return nil, err
 	}
