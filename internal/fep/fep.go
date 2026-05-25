@@ -254,9 +254,8 @@ func (fep *FEP) draw() {
 	buf.WriteString(termi.HideCursor())
 	buf.WriteString(termi.MoveCursor(0, h-1))
 
-	//termi.DefaultColor()
-	buf.WriteString(termi.SetFgColor(fep.fgColor))
-	buf.WriteString(termi.SetBgColor(fep.bgColor))
+	buf.WriteString(fep.fgColor.Fg())
+	buf.WriteString(fep.bgColor.Bg())
 
 	status, inv := fep.en.Status()
 	if inv {
@@ -275,7 +274,7 @@ func (fep *FEP) draw() {
 		buf.WriteString(" .")
 	}
 
-	buf.WriteString(termi.ResetColor())
+	buf.WriteString(termi.ResetAll)
 
 	buf.WriteString(termi.ShowCursor())
 	buf.WriteString(termi.LoadCursor())
