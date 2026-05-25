@@ -6,7 +6,7 @@ require (
 	github.com/colinmarc/cdb v0.0.0-20190223170904-60f317823f70
 	github.com/creack/pty v1.1.24
 	gopkg.in/yaml.v3 v3.0.1
-	tea.kareha.org/cup/termi v0.0.0-20260525105950-7a860c94ba6c
+	tea.kareha.org/cup/termi v0.0.0-20260525125021-f6cbf0fdbe38
 )
 
 require (
