@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -42,6 +43,8 @@ type FEP struct {
 	en       Engine
 	listener termi.EscapeListener
 	esc      bool
+	outCh    chan []byte
+	done     chan struct{}
 }
 
 func (fep *FEP) updateSize() error {
@@ -132,6 +135,8 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 		en:       en,
 		listener: nil,
 		esc:      false,
+		outCh:    make(chan []byte, 128),
+		done:     make(chan struct{}),
 	}
 
 	err = fep.updateSize()
@@ -149,10 +154,10 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 	}
 
 	_, h := termi.Size()
-	termi.ScrollRange(0, h-1)
+	fmt.Print(termi.ScrollRange(0, h-1))
 
-	termi.Clear()
-	termi.HomeCursor()
+	fmt.Print(termi.Clear())
+	fmt.Print(termi.HomeCursor())
 	termi.Raw()
 
 	err = lock(dir)
@@ -166,6 +171,12 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 		reset()
 		return nil, err
 	}
+
+	go func() {
+		for data := range fep.outCh {
+			os.Stdout.Write(data)
+		}
+	}()
 
 	fep.draw()
 
@@ -191,6 +202,8 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 
 	go func() {
 		c.Wait()
+		close(fep.done)
+		close(fep.outCh)
 	}()
 
 	listener := func(esc bool) {
@@ -204,11 +217,11 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 }
 
 func reset() {
-	termi.ScrollReset()
-	termi.Clear()
-	termi.HomeCursor()
+	fmt.Print(termi.ScrollReset())
+	fmt.Print(termi.Clear())
+	fmt.Print(termi.HomeCursor())
 	termi.Cooked()
-	termi.ShowCursor()
+	fmt.Print(termi.ShowCursor())
 }
 
 func (fep *FEP) Finish() error {
@@ -235,35 +248,45 @@ func (fep *FEP) sync() error {
 
 func (fep *FEP) draw() {
 	w, h := termi.Size()
-	termi.SaveCursor()
-	termi.HideCursor()
-	termi.MoveCursor(0, h-1)
+	buf := strings.Builder{}
+
+	buf.WriteString(termi.SaveCursor())
+	buf.WriteString(termi.HideCursor())
+	buf.WriteString(termi.MoveCursor(0, h-1))
 
 	//termi.DefaultColor()
-	termi.SetFgColor(fep.fgColor)
-	termi.SetBgColor(fep.bgColor)
+	buf.WriteString(termi.SetFgColor(fep.fgColor))
+	buf.WriteString(termi.SetBgColor(fep.bgColor))
 
 	status, inv := fep.en.Status()
 	if inv {
-		termi.EnableInvert()
+		buf.WriteString(termi.EnableInvert())
 	}
-	termi.Print(status)
-	termi.ClearTail()
+	buf.WriteString(status)
+	buf.WriteString(termi.ClearTail())
 	if inv {
-		termi.DisableInvert()
+		buf.WriteString(termi.DisableInvert())
 	}
 
-	termi.MoveCursor(w-2, h-1)
+	buf.WriteString(termi.MoveCursor(w-2, h-1))
 	if fep.esc {
-		termi.Print(" *")
+		buf.WriteString(" *")
 	} else {
-		termi.Print(" .")
+		buf.WriteString(" .")
 	}
 
-	termi.ResetColor()
+	buf.WriteString(termi.ResetColor())
 
-	termi.ShowCursor()
-	termi.LoadCursor()
+	buf.WriteString(termi.ShowCursor())
+	buf.WriteString(termi.LoadCursor())
+
+	data := []byte(buf.String())
+
+	select {
+	case fep.outCh <- data:
+	case <-fep.done:
+		return
+	}
 }
 
 func (fep *FEP) Main() {
@@ -274,6 +297,11 @@ func (fep *FEP) Main() {
 			return
 		}
 
-		os.Stdout.Write(buf[:n])
+		data := append([]byte(nil), buf[:n]...)
+		select {
+		case fep.outCh <- data:
+		case <-fep.done:
+			return
+		}
 	}
 }
