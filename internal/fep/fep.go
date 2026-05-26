@@ -302,5 +302,10 @@ func (fep *FEP) Main() {
 		case <-fep.done:
 			return
 		}
+		if strings.Contains(string(data), termi.HomeCursor()) {
+			fep.draw()
+		} else if strings.Contains(string(data), termi.Clear()) {
+			fep.draw()
+		}
 	}
 }
