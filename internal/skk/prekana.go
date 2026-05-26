@@ -215,14 +215,17 @@ func (en *Engine) handleSuper(r rune) (string, fep.Cmd) {
 	if en.conv.mode != convNone {
 		en.inputBuf.Reset()
 		en.flush()
+		en.conv.reset() // do not use en.resetConv()
+		return en.output(true)
 	}
 
 	if en.inputMode != inputHira && en.inputMode != inputKata {
 		en.inputMode = inputHira
+		return en.output(true)
 	}
 
-	en.conv.reset() // do not use en.resetConv()
-	return en.output(true)
+	en.out.WriteRune(r)
+	return en.output(false)
 }
 
 func (en *Engine) handleEnter(r rune) (string, fep.Cmd) {
