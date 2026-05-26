@@ -61,6 +61,12 @@ func main() {
 		return
 	}
 
+	// duplication guard
+	if os.Getenv("KAKIKO_RUNNING") != "" {
+		fatal("already running")
+	}
+	os.Setenv("KAKIKO_RUNNING", "1")
+
 	args := flag.Args()
 
 	var command string
