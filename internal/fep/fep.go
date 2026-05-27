@@ -28,7 +28,7 @@ const (
 type Engine interface {
 	Init(dir string) error
 	Finish() error
-	Process(key termi.Key) (string, Cmd)
+	Process(seq termi.Seq) (string, Cmd)
 	Status() (string, bool)
 	Sync() error
 }
@@ -156,8 +156,8 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 	_, h := termi.Size()
 	fmt.Print(termi.ScrollRange(0, h-1))
 
-	fmt.Print(termi.Clear())
-	fmt.Print(termi.HomeCursor())
+	fmt.Print(termi.Clear)
+	fmt.Print(termi.HomeCursor)
 	termi.Raw()
 
 	err = lock(dir)
@@ -182,8 +182,8 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 
 	go func() {
 		for {
-			key := termi.ReadKey()
-			processed, cmd := en.Process(key)
+			seq := termi.ReadSeq()
+			processed, cmd := en.Process(seq)
 			if processed != "" {
 				err = writeStringAll(f, processed)
 				if err != nil {
@@ -217,11 +217,11 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 }
 
 func reset() {
-	fmt.Print(termi.ScrollReset())
-	fmt.Print(termi.Clear())
-	fmt.Print(termi.HomeCursor())
+	fmt.Print(termi.ScrollReset)
+	fmt.Print(termi.Clear)
+	fmt.Print(termi.HomeCursor)
 	termi.Cooked()
-	fmt.Print(termi.ShowCursor())
+	fmt.Print(termi.ShowCursor)
 }
 
 func (fep *FEP) Finish() error {
@@ -250,8 +250,8 @@ func (fep *FEP) draw() {
 	w, h := termi.Size()
 	buf := strings.Builder{}
 
-	buf.WriteString(termi.SaveCursor())
-	buf.WriteString(termi.HideCursor())
+	buf.WriteString(termi.SaveCursor)
+	buf.WriteString(termi.HideCursor)
 	buf.WriteString(termi.MoveCursor(0, h-1))
 
 	buf.WriteString(fep.fgColor.Fg())
@@ -259,12 +259,12 @@ func (fep *FEP) draw() {
 
 	status, inv := fep.en.Status()
 	if inv {
-		buf.WriteString(termi.EnableInvert())
+		buf.WriteString(termi.SetInvert)
 	}
 	buf.WriteString(status)
-	buf.WriteString(termi.ClearTail())
+	buf.WriteString(termi.ClearTail)
 	if inv {
-		buf.WriteString(termi.DisableInvert())
+		buf.WriteString(termi.ResetInvert)
 	}
 
 	buf.WriteString(termi.MoveCursor(w-2, h-1))
@@ -274,10 +274,10 @@ func (fep *FEP) draw() {
 		buf.WriteString(" .")
 	}
 
-	buf.WriteString(termi.ResetAll)
+	buf.WriteString(termi.ResetAttr)
 
-	buf.WriteString(termi.ShowCursor())
-	buf.WriteString(termi.LoadCursor())
+	buf.WriteString(termi.ShowCursor)
+	buf.WriteString(termi.LoadCursor)
 
 	data := []byte(buf.String())
 
@@ -302,9 +302,9 @@ func (fep *FEP) Main() {
 		case <-fep.done:
 			return
 		}
-		if strings.Contains(string(data), termi.HomeCursor()) {
+		if strings.Contains(string(data), termi.HomeCursor) {
 			fep.draw()
-		} else if strings.Contains(string(data), termi.Clear()) {
+		} else if strings.Contains(string(data), termi.Clear) {
 			fep.draw()
 		}
 	}

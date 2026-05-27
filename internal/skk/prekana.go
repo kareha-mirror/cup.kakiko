@@ -11,20 +11,20 @@ import (
 
 const pleaseAnswer = "Please answer y or n."
 
-func (en *Engine) handleDeleteCand(key termi.Key) (string, fep.Cmd) {
+func (en *Engine) handleDeleteCand(seq termi.Seq) (string, fep.Cmd) {
 	if en.message != "" {
 		en.message = ""
 		return "", fep.CmdDraw
 	}
-	if key.Kind != termi.KeyRune {
+	if seq.Kind != termi.SeqRune {
 		en.message = pleaseAnswer
 		return "", fep.CmdDraw
 	}
-	if key.Rune == 'n' {
+	if seq.Rune == 'n' {
 		en.deleteMode = false
 		return "", fep.CmdDraw
 	}
-	if key.Rune == 'y' {
+	if seq.Rune == 'y' {
 		en.dics.Remove(en.conv.stem.String(), en.conv.cand())
 		en.dics.RemoveDiff(en.conv.stem.String(), en.conv.cand())
 		en.resetConv()
