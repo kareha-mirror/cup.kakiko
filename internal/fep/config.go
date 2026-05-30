@@ -15,8 +15,8 @@ type Config struct {
 
 func DefaultConfig() *Config {
 	return &Config{
-		FgColor: "eeddcc",
-		BgColor: "554433",
+		FgColor: "252",
+		BgColor: "235",
 	}
 }
 

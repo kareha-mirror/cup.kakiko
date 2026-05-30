@@ -178,7 +178,7 @@ func (en *Engine) handleNonAlphabet(r rune) (string, fep.Cmd) {
 	case convStem:
 		en.conv.stem.WriteRune(r)
 	default:
-		if en.regBuf.Len() > 0 {
+		if en.regMode {
 			en.regBuf.WriteRune(r)
 		} else {
 			en.conv.out.WriteRune(r)
