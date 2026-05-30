@@ -118,7 +118,7 @@ func (en *Engine) handleCancel(r rune) (string, fep.Cmd) {
 			}
 
 			en.endReg()
-			if en.conv.mode == convOkuri {
+			if en.conv.mode == convOkuri && !en.conv.hasCands() {
 				en.conv.stem.RemoveTail()
 				en.conv.stem.WriteString(en.conv.okuri.String())
 				en.conv.okuri.Reset()
