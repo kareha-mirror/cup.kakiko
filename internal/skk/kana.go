@@ -74,7 +74,10 @@ func (en *Engine) handleEscape(r rune) (string, fep.Cmd) {
 	en.flush()
 	en.resetConv()
 
-	// XXX regMode?
+	if en.regMode {
+		// drop Esc
+		return en.output(true)
+	}
 
 	if en.lineMode {
 		en.out.WriteString(en.lineBuf.String())
