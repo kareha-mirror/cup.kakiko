@@ -149,6 +149,8 @@ func (en *Engine) handleCancel(r rune) (string, fep.Cmd) {
 		en.inputBuf.Reset()
 		if en.conv.hasCands() {
 			en.conv.clearCands()
+			en.conv.stem.WriteString(en.conv.tail.String())
+			en.conv.tail.Reset()
 		} else {
 			en.resetConv()
 		}

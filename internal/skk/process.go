@@ -140,7 +140,9 @@ func (en *Engine) Process(seq termi.Seq) (string, fep.Cmd) {
 		if en.conv.mode != convOkuri || ok && tail != 'っ' && tail != 'ッ' {
 			en.dics.Add(en.conv.stem.String(), en.conv.cand())
 
-			en.writeString(en.conv.cand() + en.conv.okuri.String())
+			en.writeString(en.conv.cand())
+			en.writeString(en.conv.okuri.String())
+			en.writeString(en.conv.tail.String())
 			en.resetConv()
 			update = true
 		}

@@ -152,6 +152,11 @@ func (en *Engine) handleKigou(kigou string, update bool) (string, fep.Cmd) {
 		}
 	}
 
+	if en.conv.mode == convStem && en.conv.stem.Len() > 0 {
+		en.conv.tail.WriteString(kigou)
+		return en.handleConv()
+	}
+
 	update = update || en.inputBuf.Len() > 0
 	en.inputBuf.Reset()
 	en.writeString(kigou)

@@ -100,6 +100,9 @@ func (en *Engine) Status() (string, bool) {
 	// input
 	s.WriteString(en.inputBuf.String())
 
+	// tail
+	s.WriteString(en.conv.tail.String())
+
 	// pseudo cursor
 	s.WriteRune('_')
 

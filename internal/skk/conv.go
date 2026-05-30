@@ -19,6 +19,7 @@ type conv struct {
 	out   termi.RuneBuf
 	stem  termi.RuneBuf
 	okuri termi.RuneBuf
+	tail  termi.RuneBuf
 
 	cands []string
 	index int
@@ -31,6 +32,7 @@ func newConv() *conv {
 		out:   termi.RuneBuf{},
 		stem:  termi.RuneBuf{},
 		okuri: termi.RuneBuf{},
+		tail:  termi.RuneBuf{},
 
 		cands: []string{},
 		index: 0,
@@ -53,6 +55,7 @@ func (c *conv) resetPartial() {
 
 func (c *conv) reset() {
 	c.resetPartial()
+	c.tail.Reset()
 	c.out.Reset()
 }
 

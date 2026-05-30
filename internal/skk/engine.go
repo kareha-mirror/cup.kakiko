@@ -189,6 +189,7 @@ func (en *Engine) flushPartial() {
 	s.WriteString(en.conv.out.String())
 
 	s.WriteString(en.conv.okuri.String())
+	s.WriteString(en.conv.tail.String())
 	en.writeString(s.String())
 }
 
@@ -206,6 +207,7 @@ func (en *Engine) flush() {
 	}
 
 	s.WriteString(en.conv.okuri.String())
+	s.WriteString(en.conv.tail.String())
 	en.writeString(s.String())
 }
 
