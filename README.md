@@ -2,6 +2,8 @@
 
 kakiko is a frontend processor for text terminals which enables Japanese text input by using SKK method.
 
+* [Introduction in Japanese](intro.md)
+
 ## Build
 
 kakiko is written in Go.
