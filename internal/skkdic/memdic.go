@@ -73,8 +73,11 @@ func (d *MemDic) loadOld() (map[string]string, error) {
 	return table, nil
 }
 
-func (d *MemDic) Finish() error {
+func (d *MemDic) Finish(save bool) error {
 	if !d.loaded {
+		return nil
+	}
+	if !save {
 		return nil
 	}
 
@@ -212,7 +215,7 @@ func (d *MemDic) Remove(reading, word string) error {
 }
 
 func (d *MemDic) Sync() error {
-	err := d.Finish()
+	err := d.Finish(true)
 	if err != nil {
 		return err
 	}

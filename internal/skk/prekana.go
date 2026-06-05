@@ -207,13 +207,25 @@ func (en *Engine) handleSync() (string, fep.Cmd) {
 	return s, fep.CmdSync
 }
 
-func (en *Engine) handleSuper(r rune) (string, fep.Cmd) {
-	if en.conv.mode == convAbbrev && !en.conv.hasCands() {
-		en.out.WriteString(romaji.HanToZen(en.conv.stem.String()))
-		en.resetConv()
-		return en.output(true)
+func (en *Engine) toggleSave() (string, fep.Cmd) {
+	en.save = !en.save
+	if en.save {
+		en.message = "User dictionaries will be saved."
+	} else {
+		en.message = "User dictionaries will be discarded."
 	}
+	en.lineMode = false
+	en.linePass = false
+	return en.output(true)
+}
 
+func (en *Engine) handleToZen() (string, fep.Cmd) {
+	en.out.WriteString(romaji.HanToZen(en.conv.stem.String()))
+	en.resetConv()
+	return en.output(true)
+}
+
+func (en *Engine) handleSuper(r rune) (string, fep.Cmd) {
 	if en.conv.mode != convNone {
 		en.inputBuf.Reset()
 		en.flush()

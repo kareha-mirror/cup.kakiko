@@ -21,6 +21,7 @@ const (
 
 type Engine struct {
 	dics skkdic.Dics
+	save bool
 
 	inputMode inputMode
 	inputBuf  termi.RuneBuf
@@ -54,6 +55,7 @@ func NewEngine(dics []string) *Engine {
 
 	return &Engine{
 		dics: d,
+		save: true,
 
 		inputMode: inputASCII,
 		inputBuf:  termi.RuneBuf{},
@@ -118,7 +120,7 @@ func (en *Engine) Init(dir string) error {
 }
 
 func (en *Engine) Finish() error {
-	return en.dics.Finish()
+	return en.dics.Finish(en.save)
 }
 
 func (en *Engine) Sync() error {

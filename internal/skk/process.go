@@ -61,8 +61,11 @@ func (en *Engine) Process(seq termi.Seq) (string, fep.Cmd) {
 	if r == '\f' { // Ctrl-L
 		return en.handleLineMode(r)
 	}
-	if r == '\a' && en.linePass {
+	if r == '\a' && en.linePass { // Ctrl-G
 		return en.handleSync()
+	}
+	if r == '\x11' && en.linePass { // Ctrl-Q
+		return en.toggleSave()
 	}
 	en.linePass = false
 
@@ -79,6 +82,11 @@ func (en *Engine) Process(seq termi.Seq) (string, fep.Cmd) {
 	// enter in non-conv mode
 	if r == termi.RuneEnter && en.conv.mode == convNone {
 		return en.handleEnter(r)
+	}
+
+	// Han to Zen - Ctrl-Q
+	if r == '\x11' && en.conv.mode == convAbbrev && !en.conv.hasCands() {
+		return en.handleToZen()
 	}
 
 	switch en.inputMode {

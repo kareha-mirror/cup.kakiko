@@ -15,7 +15,7 @@ func NewStrDic(data string) *StrDic {
 	}
 }
 
-func (d *StrDic) Finish() error {
+func (d *StrDic) Finish(save bool) error {
 	return nil
 }
 

@@ -1,7 +1,7 @@
 package skkdic
 
 type Dic interface {
-	Finish() error
+	Finish(save bool) error
 	Lookup(reading string) ([]string, error)
 }
 
@@ -78,13 +78,13 @@ func (dics *Dics) RemoveDiff(reading, word string) error {
 	return dics.diff.Remove(reading, word)
 }
 
-func (dics *Dics) Finish() error {
+func (dics *Dics) Finish(save bool) error {
 	var uerr, derr error
 	if dics.ud != nil {
-		uerr = dics.ud.Finish()
+		uerr = dics.ud.Finish(save)
 	}
 	if dics.diff != nil {
-		derr = dics.diff.Finish()
+		derr = dics.diff.Finish(save)
 	}
 	if uerr != nil {
 		return uerr

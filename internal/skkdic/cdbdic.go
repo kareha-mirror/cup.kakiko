@@ -16,7 +16,7 @@ func NewCDBDic(path string) *CDBDic {
 	}
 }
 
-func (d *CDBDic) Finish() error {
+func (d *CDBDic) Finish(save bool) error {
 	if d.db == nil {
 		return nil
 	}
