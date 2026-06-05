@@ -105,7 +105,11 @@ func (en *Engine) enterAbbrevMode() (string, fep.Cmd) {
 func (en *Engine) enterConvMode() (string, fep.Cmd) {
 	en.resetKanaInput()
 	en.flush()
-	en.resetConv()
+	if en.regMode {
+		en.conv.reset() // do not use en.resetConv()
+	} else {
+		en.resetConv()
+	}
 
 	en.conv.mode = convStem
 	return en.output(true)
