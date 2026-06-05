@@ -273,9 +273,12 @@ func (en *Engine) handleZen(r rune) (string, fep.Cmd) {
 	if ok {
 		en.writeString(zen)
 	} else {
+		if r == termi.RuneEscape {
+			en.inputMode = inputASCII
+		}
 		en.writeRune(r)
 	}
-	return en.output(en.regMode || en.lineMode)
+	return en.output(en.regMode || en.lineMode || r == termi.RuneEscape)
 }
 
 func (en *Engine) handleRune(r rune) (string, fep.Cmd) {
