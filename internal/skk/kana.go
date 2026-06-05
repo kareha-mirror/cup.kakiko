@@ -26,7 +26,7 @@ func (en *Engine) resetKanaInput() {
 			en.conv.out.WriteString(nn)
 		}
 	}
-	en.inputBuf.Reset()
+	en.resetInputBuf()
 }
 
 func (en *Engine) enterZenMode() (string, fep.Cmd) {
@@ -179,7 +179,7 @@ func (en *Engine) handleKigou(kigou string, update bool) (string, fep.Cmd) {
 	}
 
 	update = update || en.inputBuf.Len() > 0
-	en.inputBuf.Reset()
+	en.resetInputBuf()
 	en.writeString(kigou)
 	if en.regMode || en.lineMode {
 		update = true
@@ -263,26 +263,50 @@ func (en *Engine) toggleKanaType() (string, fep.Cmd) {
 	return en.output(true)
 }
 
+var ohVowels = map[string]bool{
+	"a": true,
+	"i": true,
+	"u": true,
+	"e": true,
+	"o": true,
+	"h": true,
+}
+
 func (en *Engine) handleAlphabet(r rune, update bool) (string, fep.Cmd) {
 	en.inputBuf.WriteRune(r)
 
-	var kana string
+	kana := ""
+
+	if en.inputPrev == "o" && en.inputBuf.Len() >= 2 {
+		s, ok := en.inputBuf.Substring(0, 1)
+		if ok && s == "h" {
+			s, ok := en.inputBuf.Substring(1, 2)
+			if ok {
+				_, ok = ohVowels[s]
+				if !ok {
+					kana = "お"
+					en.removeHeadInputBuf()
+				}
+			}
+		}
+	}
+
 	hold := false
 	if _, ok := romaji.IsSokuon[en.inputBuf.String()]; ok {
 		if en.inputMode == inputHira {
-			kana = "っ"
+			kana += "っ"
 		} else { // inputKata
-			kana = "ッ"
+			kana += "ッ"
 		}
-		en.inputBuf.RemoveHead()
+		en.removeHeadInputBuf()
 		hold = true
 	} else if _, ok := romaji.IsN[en.inputBuf.String()]; ok {
 		if en.inputMode == inputHira {
-			kana = "ん"
+			kana += "ん"
 		} else { // inputKata
-			kana = "ン"
+			kana += "ン"
 		}
-		en.inputBuf.RemoveHead()
+		en.removeHeadInputBuf()
 		hold = true
 	} else {
 		lookup := en.inputBuf.String()
@@ -298,8 +322,9 @@ func (en *Engine) handleAlphabet(r rune, update bool) (string, fep.Cmd) {
 			k, ok = romaji.ToKata[lookup]
 		}
 		if ok {
-			kana = k
+			kana += k
 			en.inputBuf.Reset()
+			en.inputPrev = lookup
 		}
 	}
 

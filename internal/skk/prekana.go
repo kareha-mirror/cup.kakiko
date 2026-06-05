@@ -38,7 +38,7 @@ func (en *Engine) handleDeleteCand(seq termi.Seq) (string, fep.Cmd) {
 
 func (en *Engine) handleBackspace(r rune) (string, fep.Cmd) {
 	if en.inputBuf.Len() > 0 {
-		en.inputBuf.Reset()
+		en.resetInputBuf()
 		if en.conv.mode == convOkuri {
 			en.conv.mode = convStem
 			en.conv.stem.RemoveTail()
@@ -107,7 +107,7 @@ func (en *Engine) handleCancel(r rune) (string, fep.Cmd) {
 	default: //case convNone:
 		if en.regMode {
 			if en.inputBuf.Len() > 0 {
-				en.inputBuf.Reset()
+				en.resetInputBuf()
 				return en.output(true)
 			}
 
@@ -128,13 +128,13 @@ func (en *Engine) handleCancel(r rune) (string, fep.Cmd) {
 		}
 
 		if en.inputBuf.Len() > 0 {
-			en.inputBuf.Reset()
+			en.resetInputBuf()
 			return en.output(true)
 		}
 		en.out.WriteRune(r)
 		return en.output(false)
 	case convOkuri:
-		en.inputBuf.Reset()
+		en.resetInputBuf()
 		if en.conv.hasCands() {
 			en.conv.stem.RemoveTail()
 			en.conv.stem.WriteString(en.conv.okuri.String())
@@ -146,7 +146,7 @@ func (en *Engine) handleCancel(r rune) (string, fep.Cmd) {
 		}
 		return en.output(true)
 	case convStem, convAbbrev:
-		en.inputBuf.Reset()
+		en.resetInputBuf()
 		if en.conv.hasCands() {
 			en.conv.clearCands()
 			en.conv.stem.WriteString(en.conv.tail.String())
@@ -227,7 +227,7 @@ func (en *Engine) handleToZen() (string, fep.Cmd) {
 
 func (en *Engine) handleSuper(r rune) (string, fep.Cmd) {
 	if en.conv.mode != convNone {
-		en.inputBuf.Reset()
+		en.resetInputBuf()
 		en.flush()
 		en.conv.reset() // do not use en.resetConv()
 		return en.output(true)

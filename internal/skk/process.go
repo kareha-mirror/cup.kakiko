@@ -190,14 +190,14 @@ func (en *Engine) Process(seq termi.Seq) (string, fep.Cmd) {
 			} else { // inputKata
 				en.conv.stem.WriteRune('ッ')
 			}
-			en.inputBuf.RemoveHead()
+			en.removeHeadInputBuf()
 		} else if _, ok := romaji.IsN[inp]; ok {
 			if en.inputMode == inputHira {
 				en.conv.stem.WriteRune('ん')
 			} else { // inputKata
 				en.conv.stem.WriteRune('ン')
 			}
-			en.inputBuf.RemoveHead()
+			en.removeHeadInputBuf()
 		}
 
 		en.conv.advanceMode()

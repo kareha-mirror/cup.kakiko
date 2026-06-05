@@ -25,6 +25,7 @@ type Engine struct {
 
 	inputMode inputMode
 	inputBuf  termi.RuneBuf
+	inputPrev string
 	conv      *conv
 
 	stack   []*conv
@@ -59,6 +60,7 @@ func NewEngine(dics []string) *Engine {
 
 		inputMode: inputASCII,
 		inputBuf:  termi.RuneBuf{},
+		inputPrev: "",
 		conv:      newConv(),
 
 		stack:   []*conv{},
@@ -127,6 +129,16 @@ func (en *Engine) Sync() error {
 	return en.dics.Sync()
 }
 
+func (en *Engine) resetInputBuf() {
+	en.inputBuf.Reset()
+	en.inputPrev = ""
+}
+
+func (en *Engine) removeHeadInputBuf() {
+	en.inputBuf.RemoveHead()
+	en.inputPrev = ""
+}
+
 func (en *Engine) output(update bool) (string, fep.Cmd) {
 	s := en.out.String()
 	en.out.Reset()
@@ -160,7 +172,7 @@ func (en *Engine) beginReg() {
 }
 
 func (en *Engine) endReg() {
-	en.inputBuf.Reset()
+	en.resetInputBuf()
 	if !en.popConv() {
 		en.regMode = false
 	}
