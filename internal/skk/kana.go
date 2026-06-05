@@ -102,6 +102,15 @@ func (en *Engine) enterAbbrevMode() (string, fep.Cmd) {
 	return en.output(true)
 }
 
+func (en *Engine) enterConvMode() (string, fep.Cmd) {
+	en.resetKanaInput()
+	en.flush()
+	en.resetConv()
+
+	en.conv.mode = convStem
+	return en.output(true)
+}
+
 func (en *Engine) handleConv() (string, fep.Cmd) {
 	if en.conv.hasCands() {
 		if en.conv.index < candOffset {
@@ -119,6 +128,11 @@ func (en *Engine) handleConv() (string, fep.Cmd) {
 		}
 	} else {
 		en.resetKanaInput()
+
+		if en.conv.stem.Len() < 1 {
+			en.resetConv()
+			return en.output(true)
+		}
 
 		var err error
 		stem := romaji.KataToHira(en.conv.stem.String())

@@ -106,6 +106,8 @@ func (en *Engine) Process(seq termi.Seq) (string, fep.Cmd) {
 		return en.enterZenMode()
 	case '/':
 		return en.enterAbbrevMode()
+	case 'Q':
+		return en.enterConvMode()
 	}
 
 	// control code
