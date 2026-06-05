@@ -179,6 +179,10 @@ func (en *Engine) Process(seq termi.Seq) (string, fep.Cmd) {
 		en.conv.advanceMode()
 	}
 
+	if r == '\'' && en.inputBuf.String() == "n" {
+		return en.handleAlphabet('n', update)
+	}
+
 	if r < 'a' || r > 'z' {
 		return en.handleNonAlphabet(r)
 	}
