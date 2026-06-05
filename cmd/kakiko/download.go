@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 )
 
-const dictionaryURL = "https://tea.kareha.org/ja/skk-e/raw/branch/main/legacy-cdb/skk-edic-legacy-l.cdb"
-const dictionaryFilename = "skk-edic-legacy-l.cdb"
+const dictionaryURL = "https://tea.kareha.org/ja/skk-e/raw/branch/main/legacy-cdb/skk-edic-legacy-large.cdb"
+const dictionaryFilename = "skk-edic-legacy-large.cdb"
 
 func getHTTP(u *url.URL) ([]byte, error) {
 	resp, err := http.Get(u.String())

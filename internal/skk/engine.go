@@ -90,7 +90,7 @@ func (en *Engine) SetDiffDic(dic skkdic.UserDic) {
 }
 
 func getSKKDicPath(dir string) string {
-	return filepath.Join(dir, "skk-edic-legacy-l.cdb")
+	return filepath.Join(dir, "skk-edic-legacy-large.cdb")
 }
 
 func getSKKUserDicPath(dir string) string {
