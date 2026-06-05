@@ -132,6 +132,20 @@ func (en *Engine) Process(seq termi.Seq) (string, fep.Cmd) {
 		return "", fep.CmdDraw
 	}
 
+	// prefix
+	if r == '>' && en.conv.mode == convStem && !en.conv.hasCands() {
+		en.resetKanaInput()
+		en.conv.stem.WriteRune(r)
+		return en.handleConv()
+	}
+	// suffix
+	if r == '>' && en.conv.hasCands() {
+		s, cmd := en.handleConvEnter()
+		en.conv.stem.WriteRune(r)
+		en.conv.mode = convStem
+		return s, cmd
+	}
+
 	// handle abbrev
 	if en.conv.mode == convAbbrev {
 		if en.conv.hasCands() {
