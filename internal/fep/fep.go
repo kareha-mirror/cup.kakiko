@@ -110,6 +110,8 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 		cfg = LoadConfig(cfgPath)
 	}
 
+	termi.EscapeTimeout = time.Duration(cfg.EscTimeout) * time.Millisecond
+
 	fgColor, err := termi.ParseColor(cfg.FgColor)
 	if err != nil {
 		return nil, err
