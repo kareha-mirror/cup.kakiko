@@ -254,8 +254,8 @@ func (fep *FEP) draw() {
 	w, h := termi.Size()
 	buf := strings.Builder{}
 
-	buf.WriteString(termi.SaveCursor)
 	buf.WriteString(termi.HideCursor)
+	buf.WriteString(termi.SaveCursor)
 	buf.WriteString(termi.MoveCursor(0, h-1))
 
 	buf.WriteString(fep.fgColor.Fg())
@@ -280,8 +280,8 @@ func (fep *FEP) draw() {
 
 	buf.WriteString(termi.ResetAttr)
 
-	buf.WriteString(termi.ShowCursor)
 	buf.WriteString(termi.LoadCursor)
+	buf.WriteString(termi.ShowCursor)
 
 	data := []byte(buf.String())
 
