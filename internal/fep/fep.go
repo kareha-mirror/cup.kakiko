@@ -161,7 +161,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 	fmt.Print(termi.Clear)
 	fmt.Print(termi.HomeCursor)
 	termi.Raw()
-	termi.Init()
+	termi.StartInput()
 
 	err = lock(dir)
 	if err != nil {
@@ -220,7 +220,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 }
 
 func reset() {
-	termi.Finish()
+	termi.StopInput()
 	fmt.Print(termi.ScrollReset)
 	fmt.Print(termi.Clear)
 	fmt.Print(termi.HomeCursor)
