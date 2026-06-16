@@ -214,7 +214,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 		fep.draw()
 	}
 	fep.listener = termi.EscapeListener(&listener)
-	termi.AddEscapeListener(fep.listener)
+	termi.SetEscapeListener(fep.listener)
 
 	return fep, nil
 }
@@ -235,7 +235,7 @@ func (fep *FEP) Finish() error {
 		Unlock(fep.dir)
 	}
 
-	termi.RemoveEscapeListener(fep.listener)
+	termi.SetEscapeListener(nil)
 	reset()
 	return err
 }

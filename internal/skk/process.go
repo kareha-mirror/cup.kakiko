@@ -75,7 +75,7 @@ func (en *Engine) Process(seq termi.Seq) (string, fep.Cmd) {
 		return en.handleBackspace(r)
 	case '\a': // Ctrl-G
 		return en.handleCancel(r)
-	case '\n': // Ctrl-J
+	case termi.RuneNewline: // Ctrl-J
 		return en.handleSuper(r)
 	}
 
