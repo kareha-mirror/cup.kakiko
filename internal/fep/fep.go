@@ -28,7 +28,7 @@ const (
 type Engine interface {
 	Init(dir string) error
 	Finish() error
-	Process(seq termi.Seq) (string, Cmd)
+	Process(key termi.Key) (string, Cmd)
 	Status() (string, bool)
 	Sync() error
 }
@@ -161,7 +161,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 	fmt.Print(termi.Clear)
 	fmt.Print(termi.HomeCursor)
 	termi.Raw()
-	termi.StartInput()
+	termi.StartKey()
 
 	err = lock(dir)
 	if err != nil {
@@ -185,8 +185,8 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 
 	go func() {
 		for {
-			seq := termi.ReadSeq()
-			processed, cmd := en.Process(seq)
+			key := <-termi.Keys()
+			processed, cmd := en.Process(key)
 			if processed != "" {
 				err = writeStringAll(f, processed)
 				if err != nil {
@@ -220,7 +220,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 }
 
 func reset() {
-	termi.StopInput()
+	termi.StopKey()
 	fmt.Print(termi.ScrollReset)
 	fmt.Print(termi.Clear)
 	fmt.Print(termi.HomeCursor)

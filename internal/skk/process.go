@@ -7,24 +7,24 @@ import (
 	"tea.kareha.org/cup/kakiko/internal/romaji"
 )
 
-func (en *Engine) Process(seq termi.Seq) (string, fep.Cmd) {
+func (en *Engine) Process(key termi.Key) (string, fep.Cmd) {
 	// delete candidate
 	if en.deleteMode {
-		return en.handleDeleteCand(seq)
+		return en.handleDeleteCand(key)
 	}
 
 	// paste
 	if en.pasteMode {
-		if seq.Kind == termi.SeqEndPaste {
+		if key.Kind == termi.KeyEndPaste {
 			en.pasteMode = false
 			return "", fep.CmdNone
 		}
-		if seq.Kind != termi.SeqRune {
+		if key.Kind != termi.KeyRune {
 			return "", fep.CmdNone
 		}
-		return en.handleRune(seq.Rune)
+		return en.handleRune(key.Rune)
 	}
-	if seq.Kind == termi.SeqBeginPaste && en.regMode {
+	if key.Kind == termi.KeyBeginPaste && en.regMode {
 		en.pasteMode = true
 		return "", fep.CmdNone
 	}
@@ -36,12 +36,12 @@ func (en *Engine) Process(seq termi.Seq) (string, fep.Cmd) {
 	}
 
 	// pass-through
-	if seq.Kind != termi.SeqRune {
-		return seq.Raw, fep.CmdNone
+	if key.Kind != termi.KeyRune {
+		return key.Raw, fep.CmdNone
 	}
 
 	// shortcut
-	r := seq.Rune
+	r := key.Rune
 
 	// show list of candidates
 	if en.conv.index >= candOffset {
