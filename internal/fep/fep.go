@@ -34,10 +34,9 @@ type Engine interface {
 }
 
 type FEP struct {
-	dir     string
-	cfg     *Config
-	fgColor termi.Color
-	bgColor termi.Color
+	dir   string
+	cfg   *Config
+	color termi.ColorPair
 
 	f        *os.File
 	en       Engine
@@ -110,17 +109,13 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 		cfg = LoadConfig(cfgPath)
 	}
 
-	termi.EscapeTimeout = time.Duration(cfg.EscTimeout) * time.Millisecond
-
-	fgColor, err := termi.ParseColor(cfg.FgColor)
+	color, err := termi.ParseColorPair(cfg.Color)
 	if err != nil {
 		return nil, err
 	}
 
-	bgColor, err := termi.ParseColor(cfg.BgColor)
-	if err != nil {
-		return nil, err
-	}
+	termi.EscapeTimeout =
+		time.Duration(cfg.EscapeTimeout) * time.Millisecond
 
 	f, err := pty.Start(c)
 	if err != nil {
@@ -128,10 +123,9 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 	}
 
 	fep := &FEP{
-		dir:     dir,
-		cfg:     cfg,
-		fgColor: fgColor,
-		bgColor: bgColor,
+		dir:   dir,
+		cfg:   cfg,
+		color: color,
 
 		f:        f,
 		en:       en,
@@ -258,8 +252,7 @@ func (fep *FEP) draw() {
 	buf.WriteString(termi.SaveCursor)
 	buf.WriteString(termi.MoveCursor(0, h-1))
 
-	buf.WriteString(fep.fgColor.Fg())
-	buf.WriteString(fep.bgColor.Bg())
+	buf.WriteString(fep.color.Seq())
 
 	status, inv := fep.en.Status()
 	if inv {

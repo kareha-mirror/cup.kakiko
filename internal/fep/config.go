@@ -9,18 +9,16 @@ import (
 )
 
 type Config struct {
-	EscTimeout int `yaml:"esc-timeout"`
+	Color string `yaml:"color"`
 
-	FgColor string `yaml:"fg-color"`
-	BgColor string `yaml:"bg-color"`
+	EscapeTimeout int `yaml:"escapce-timeout"`
 }
 
 func DefaultConfig() *Config {
 	return &Config{
-		EscTimeout: 100,
+		Color: "252,235",
 
-		FgColor: "252",
-		BgColor: "235",
+		EscapeTimeout: 100,
 	}
 }
 
