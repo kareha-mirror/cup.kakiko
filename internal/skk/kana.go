@@ -133,7 +133,7 @@ func (en *Engine) handleConv() (string, fep.Cmd) {
 	} else {
 		en.resetKanaInput()
 
-		if en.conv.stem.Len() < 1 {
+		if en.conv.stem.RuneCount() < 1 {
 			en.resetConv()
 			return en.output(true)
 		}
@@ -173,12 +173,12 @@ func (en *Engine) handleKigou(kigou string, update bool) (string, fep.Cmd) {
 		}
 	}
 
-	if en.conv.mode == convStem && en.conv.stem.Len() > 0 {
+	if en.conv.mode == convStem && en.conv.stem.RuneCount() > 0 {
 		en.conv.tail.WriteString(kigou)
 		return en.handleConv()
 	}
 
-	update = update || en.inputBuf.Len() > 0
+	update = update || en.inputBuf.RuneCount() > 0
 	en.resetInputBuf()
 	en.writeString(kigou)
 	if en.regMode || en.lineMode {
@@ -277,12 +277,12 @@ func (en *Engine) handleAlphabet(r rune, update bool) (string, fep.Cmd) {
 
 	kana := ""
 
-	if en.inputPrev == "o" && en.inputBuf.Len() >= 2 {
-		s, ok := en.inputBuf.Substring(0, 1)
-		if ok && s == "h" {
-			s, ok := en.inputBuf.Substring(1, 2)
-			if ok {
-				_, ok = ohVowels[s]
+	if en.inputPrev == "o" && en.inputBuf.RuneCount() >= 2 {
+		s := en.inputBuf.Body(0, 1)
+		if s != nil && s.String() == "h" {
+			s := en.inputBuf.Body(1, 2)
+			if s != nil {
+				_, ok := ohVowels[s.String()]
 				if !ok {
 					kana = "お"
 					en.removeHeadInputBuf()
@@ -351,7 +351,7 @@ func (en *Engine) handleAlphabet(r rune, update bool) (string, fep.Cmd) {
 			en.conv.stem.WriteRune(r)
 		}
 
-		if en.conv.okuri.Len() < 1 {
+		if en.conv.okuri.RuneCount() < 1 {
 			return en.output(true)
 		}
 

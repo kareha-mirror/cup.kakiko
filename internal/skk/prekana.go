@@ -37,7 +37,7 @@ func (en *Engine) handleDeleteCand(key termi.Key) (string, fep.Cmd) {
 }
 
 func (en *Engine) handleBackspace(r rune) (string, fep.Cmd) {
-	if en.inputBuf.Len() > 0 {
+	if en.inputBuf.RuneCount() > 0 {
 		en.resetInputBuf()
 		if en.conv.mode == convOkuri {
 			en.conv.mode = convStem
@@ -53,7 +53,7 @@ func (en *Engine) handleBackspace(r rune) (string, fep.Cmd) {
 			if en.conv.mode == convOkuri {
 				en.conv.okuri.RemoveTail()
 			} else {
-				if en.regMode && en.conv.out.Len() < 1 {
+				if en.regMode && en.conv.out.RuneCount() < 1 {
 					en.regBuf.WriteString(en.conv.cand())
 					en.regBuf.RemoveTail()
 				} else {
@@ -106,12 +106,12 @@ func (en *Engine) handleCancel(r rune) (string, fep.Cmd) {
 	switch en.conv.mode {
 	default: //case convNone:
 		if en.regMode {
-			if en.inputBuf.Len() > 0 {
+			if en.inputBuf.RuneCount() > 0 {
 				en.resetInputBuf()
 				return en.output(true)
 			}
 
-			if en.regBuf.Len() > 0 || en.conv.out.Len() > 0 {
+			if en.regBuf.RuneCount() > 0 || en.conv.out.RuneCount() > 0 {
 				en.regBuf.Reset()
 				en.conv.out.Reset()
 				return en.output(true)
@@ -127,7 +127,7 @@ func (en *Engine) handleCancel(r rune) (string, fep.Cmd) {
 			return en.output(true)
 		}
 
-		if en.inputBuf.Len() > 0 {
+		if en.inputBuf.RuneCount() > 0 {
 			en.resetInputBuf()
 			return en.output(true)
 		}
@@ -270,7 +270,7 @@ func (en *Engine) handleEnter(r rune) (string, fep.Cmd) {
 		return en.output(true)
 	}
 
-	if en.lineMode && en.lineBuf.Len() > 0 {
+	if en.lineMode && en.lineBuf.RuneCount() > 0 {
 		en.out.WriteString(en.lineBuf.String())
 		en.lineBuf.Reset()
 		return en.output(true)

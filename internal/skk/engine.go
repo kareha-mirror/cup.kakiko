@@ -212,7 +212,7 @@ func (en *Engine) flush() {
 	s.WriteString(en.conv.out.String())
 
 	if en.conv.hasCands() {
-		if en.conv.stem.Len() > 0 {
+		if en.conv.stem.RuneCount() > 0 {
 			s.WriteString(en.conv.cand())
 			en.dics.Add(en.conv.stem.String(), en.conv.cand())
 		}

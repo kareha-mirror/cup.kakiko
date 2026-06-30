@@ -92,7 +92,7 @@ func (en *Engine) Status() (string, bool) {
 	}
 
 	// okuri
-	if en.conv.mode == convOkuri && en.inputBuf.Len() > 0 {
+	if en.conv.mode == convOkuri && en.inputBuf.RuneCount() > 0 {
 		s.WriteRune('*')
 	}
 	s.WriteString(en.conv.okuri.String())
