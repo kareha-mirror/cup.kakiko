@@ -14,7 +14,6 @@ import (
 )
 
 const appName = "kakiko"
-const fallbackCommand = "/bin/sh"
 
 //go:embed skk-edic-joyo.txt
 var skkdicJoyo string
@@ -73,10 +72,7 @@ func main() {
 	var command string
 	var arguments []string
 	if len(args) < 1 {
-		command = os.Getenv("SHELL")
-		if command == "" {
-			command = fallbackCommand
-		}
+		command = guessCommand()
 	} else {
 		command = args[0]
 	}
