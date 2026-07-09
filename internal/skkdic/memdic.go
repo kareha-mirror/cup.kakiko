@@ -40,6 +40,7 @@ func (d *MemDic) ensureLoaded() error {
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 	err = Load(r, d.table)
 	if err != nil {
 		return err
@@ -63,6 +64,7 @@ func (d *MemDic) loadOld() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer r.Close()
 
 	table := map[string]string{}
 	err = Load(r, table)
@@ -117,6 +119,7 @@ func (d *MemDic) Finish(save bool) error {
 	if err != nil {
 		return err
 	}
+	w.Close()
 	return os.Rename(temp, d.path)
 }
 
