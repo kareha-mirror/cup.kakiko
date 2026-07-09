@@ -9,6 +9,7 @@ import (
 
 	"tea.kareha.org/cup/termi"
 	"tea.kareha.org/cup/termi/lock"
+	"tea.kareha.org/cup/termi/pity"
 )
 
 const bufferSize = 1024
@@ -34,7 +35,7 @@ type FEP struct {
 	cfg   *Config
 	color termi.ColorPair
 
-	f        *Pty
+	p        *pity.Pity
 	en       Engine
 	listener termi.EscapeListener
 	esc      bool
@@ -43,19 +44,16 @@ type FEP struct {
 }
 
 func (fep *FEP) updateSize() error {
-	cols, rows, err := PtyGetSize(os.Stdin)
-	if err != nil {
-		return err
-	}
-	return fep.f.PtySetSize(cols, rows - 1)
+	w, h := termi.Size()
+	return fep.p.SetSize(w, h-1)
 }
 
-func writeStringAll(f *Pty, s string) error {
+func writeStringAll(p *pity.Pity, s string) error {
 	data := []byte(s)
 	total := 0
 
 	for total < len(data) {
-		n, err := f.f.Write(data[total:])
+		n, err := p.Write(data[total:])
 		if err != nil {
 			return err
 		}
@@ -87,7 +85,7 @@ func Init(dir string, en Engine, cmd string, args ...string) (*FEP, error) {
 	termi.EscapeTimeout =
 		time.Duration(cfg.EscapeTimeout) * time.Millisecond
 
-	f, err := PtyStart(cmd, args...)
+	p, err := pity.Start(cmd, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +95,7 @@ func Init(dir string, en Engine, cmd string, args ...string) (*FEP, error) {
 		cfg:   cfg,
 		color: color,
 
-		f:        f,
+		p:        p,
 		en:       en,
 		listener: nil,
 		esc:      false,
@@ -117,13 +115,13 @@ func Init(dir string, en Engine, cmd string, args ...string) (*FEP, error) {
 
 	err = lock.Lock(dir)
 	if err != nil {
-		reset()
+		fep.reset()
 		return nil, err
 	}
 	err = en.Init(dir)
 	lock.Unlock(dir)
 	if err != nil {
-		reset()
+		fep.reset()
 		return nil, err
 	}
 
@@ -140,7 +138,7 @@ func Init(dir string, en Engine, cmd string, args ...string) (*FEP, error) {
 			key := <-termi.Keys()
 			processed, cmd := en.Process(key)
 			if processed != "" {
-				err = writeStringAll(f, processed)
+				err = writeStringAll(p, processed)
 				if err != nil {
 					return
 				}
@@ -156,7 +154,7 @@ func Init(dir string, en Engine, cmd string, args ...string) (*FEP, error) {
 	}()
 
 	go func() {
-		f.Wait()
+		p.Wait()
 		close(fep.done)
 		close(fep.outCh)
 	}()
@@ -171,13 +169,15 @@ func Init(dir string, en Engine, cmd string, args ...string) (*FEP, error) {
 	return fep, nil
 }
 
-func reset() {
+func (fep *FEP) reset() {
 	termi.FinishKey()
 	fmt.Print(termi.ScrollReset)
 	fmt.Print(termi.Clear)
 	fmt.Print(termi.HomeCursor)
 	termi.Cooked()
 	fmt.Print(termi.ShowCursor)
+
+	fep.p.Close()
 }
 
 func (fep *FEP) Finish() error {
@@ -188,7 +188,7 @@ func (fep *FEP) Finish() error {
 	}
 
 	termi.SetEscapeListener(nil)
-	reset()
+	fep.reset()
 	return err
 }
 
@@ -246,7 +246,7 @@ func (fep *FEP) draw() {
 func (fep *FEP) Main() {
 	buf := make([]byte, bufferSize)
 	for {
-		n, err := fep.f.f.Read(buf)
+		n, err := fep.p.Read(buf)
 		if err != nil {
 			return
 		}
