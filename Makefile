@@ -27,3 +27,6 @@ kk:
 	mkdir -p config
 	./kakiko -joyo -d config
 	rm -rf config
+
+windows:
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o kakiko.exe ./cmd/kakiko

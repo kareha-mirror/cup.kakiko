@@ -3,10 +3,11 @@ module tea.kareha.org/cup/kakiko
 go 1.25.0
 
 require (
+	github.com/UserExistsError/conpty v0.1.4
 	github.com/colinmarc/cdb v0.0.0-20190223170904-60f317823f70
 	github.com/creack/pty v1.1.24
 	gopkg.in/yaml.v3 v3.0.1
-	tea.kareha.org/cup/termi v0.0.0-20260630052155-52277a5b77fb
+	tea.kareha.org/cup/termi v0.0.0-20260707155821-647a2a910d93
 )
 
 require (

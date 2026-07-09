@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"tea.kareha.org/cup/termi"
+	"tea.kareha.org/cup/termi/rbuf"
 
 	"tea.kareha.org/cup/kakiko/internal/fep"
 	"tea.kareha.org/cup/kakiko/internal/skkdic"
@@ -24,16 +24,16 @@ type Engine struct {
 	save bool
 
 	inputMode inputMode
-	inputBuf  termi.RuneBuf
+	inputBuf  rbuf.RuneBuf
 	inputPrev string
 	conv      *conv
 
 	stack   []*conv
 	regMode bool
-	regBuf  termi.RuneBuf
+	regBuf  rbuf.RuneBuf
 
 	lineMode bool
-	lineBuf  termi.RuneBuf
+	lineBuf  rbuf.RuneBuf
 	linePass bool
 
 	deleteMode bool
@@ -59,16 +59,16 @@ func NewEngine(dics []string) *Engine {
 		save: true,
 
 		inputMode: inputASCII,
-		inputBuf:  termi.RuneBuf{},
+		inputBuf:  rbuf.RuneBuf{},
 		inputPrev: "",
 		conv:      newConv(),
 
 		stack:   []*conv{},
 		regMode: false,
-		regBuf:  termi.RuneBuf{},
+		regBuf:  rbuf.RuneBuf{},
 
 		lineMode: false,
-		lineBuf:  termi.RuneBuf{},
+		lineBuf:  rbuf.RuneBuf{},
 		linePass: false,
 
 		deleteMode: false,

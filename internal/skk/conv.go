@@ -1,7 +1,7 @@
 package skk
 
 import (
-	"tea.kareha.org/cup/termi"
+	"tea.kareha.org/cup/termi/rbuf"
 )
 
 type convMode int
@@ -16,10 +16,10 @@ const (
 type conv struct {
 	mode convMode
 
-	out   termi.RuneBuf
-	stem  termi.RuneBuf
-	okuri termi.RuneBuf
-	tail  termi.RuneBuf
+	out   rbuf.RuneBuf
+	stem  rbuf.RuneBuf
+	okuri rbuf.RuneBuf
+	tail  rbuf.RuneBuf
 
 	cands []string
 	index int
@@ -29,10 +29,10 @@ func newConv() *conv {
 	return &conv{
 		mode: convNone,
 
-		out:   termi.RuneBuf{},
-		stem:  termi.RuneBuf{},
-		okuri: termi.RuneBuf{},
-		tail:  termi.RuneBuf{},
+		out:   rbuf.RuneBuf{},
+		stem:  rbuf.RuneBuf{},
+		okuri: rbuf.RuneBuf{},
+		tail:  rbuf.RuneBuf{},
 
 		cands: []string{},
 		index: 0,

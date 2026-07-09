@@ -5,8 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
+
+	"tea.kareha.org/cup/termi/lock"
 
 	"tea.kareha.org/cup/kakiko/internal/fep"
 	"tea.kareha.org/cup/kakiko/internal/skk"
@@ -46,7 +47,7 @@ func main() {
 	}
 
 	if *unlock {
-		err := fep.Unlock(*configDir)
+		err := lock.Unlock(*configDir)
 		if err != nil {
 			fatal(err)
 		}
@@ -82,7 +83,6 @@ func main() {
 	if len(args) > 1 {
 		arguments = args[1:]
 	}
-	var c = exec.Command(command, arguments...)
 
 	dics := []string{}
 	if !*joyo {
@@ -91,7 +91,7 @@ func main() {
 	dics = append(dics, skkdicJoyo)
 	en := skk.NewEngine(dics)
 
-	f, err := fep.Init(*configDir, en, c)
+	f, err := fep.Init(*configDir, en, command, arguments...)
 	if err != nil {
 		fatal(err)
 	}

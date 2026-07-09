@@ -3,16 +3,12 @@ package fep
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
-	"github.com/creack/pty"
-
 	"tea.kareha.org/cup/termi"
+	"tea.kareha.org/cup/termi/lock"
 )
 
 const bufferSize = 1024
@@ -38,7 +34,7 @@ type FEP struct {
 	cfg   *Config
 	color termi.ColorPair
 
-	f        *os.File
+	f        *Pty
 	en       Engine
 	listener termi.EscapeListener
 	esc      bool
@@ -47,23 +43,19 @@ type FEP struct {
 }
 
 func (fep *FEP) updateSize() error {
-	rows, cols, err := pty.Getsize(os.Stdin)
+	cols, rows, err := PtyGetSize(os.Stdin)
 	if err != nil {
 		return err
 	}
-	pty.Setsize(fep.f, &pty.Winsize{
-		Rows: uint16(rows - 1),
-		Cols: uint16(cols),
-	})
-	return nil
+	return fep.f.PtySetSize(cols, rows - 1)
 }
 
-func writeStringAll(f *os.File, s string) error {
+func writeStringAll(f *Pty, s string) error {
 	data := []byte(s)
 	total := 0
 
 	for total < len(data) {
-		n, err := f.Write(data[total:])
+		n, err := f.f.Write(data[total:])
 		if err != nil {
 			return err
 		}
@@ -76,29 +68,7 @@ func getConfigPath(dir string) string {
 	return filepath.Join(dir, "fep.yaml")
 }
 
-func getLockPath(dir string) string {
-	return filepath.Join(dir, "lock")
-}
-
-func lock(dir string) error {
-	path := getLockPath(dir)
-	for i := 0; i < 8; i++ {
-		err := os.Mkdir(path, 0777)
-		if err == nil {
-			return nil
-		}
-		d, _ := time.ParseDuration("1s")
-		time.Sleep(d)
-	}
-	return fmt.Errorf("cannot create lock")
-}
-
-func Unlock(dir string) error {
-	path := getLockPath(dir)
-	return os.Remove(path)
-}
-
-func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
+func Init(dir string, en Engine, cmd string, args ...string) (*FEP, error) {
 	var cfg *Config
 	cfgPath := getConfigPath(dir)
 	_, err := os.Stat(cfgPath)
@@ -117,7 +87,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 	termi.EscapeTimeout =
 		time.Duration(cfg.EscapeTimeout) * time.Millisecond
 
-	f, err := pty.Start(c)
+	f, err := PtyStart(cmd, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -135,19 +105,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 		done:     make(chan struct{}),
 	}
 
-	err = fep.updateSize()
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGWINCH)
-	if err == nil {
-		go func() {
-			for range ch {
-				err := fep.updateSize()
-				if err != nil {
-					return
-				}
-			}
-		}()
-	}
+	winch(fep)
 
 	_, h := termi.Size()
 	fmt.Print(termi.ScrollRange(0, h-1))
@@ -155,15 +113,15 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 	fmt.Print(termi.Clear)
 	fmt.Print(termi.HomeCursor)
 	termi.Raw()
-	termi.StartKey()
+	termi.InitKey()
 
-	err = lock(dir)
+	err = lock.Lock(dir)
 	if err != nil {
 		reset()
 		return nil, err
 	}
 	err = en.Init(dir)
-	Unlock(dir)
+	lock.Unlock(dir)
 	if err != nil {
 		reset()
 		return nil, err
@@ -198,7 +156,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 	}()
 
 	go func() {
-		c.Wait()
+		f.Wait()
 		close(fep.done)
 		close(fep.outCh)
 	}()
@@ -214,7 +172,7 @@ func Init(dir string, en Engine, c *exec.Cmd) (*FEP, error) {
 }
 
 func reset() {
-	termi.StopKey()
+	termi.FinishKey()
 	fmt.Print(termi.ScrollReset)
 	fmt.Print(termi.Clear)
 	fmt.Print(termi.HomeCursor)
@@ -223,10 +181,10 @@ func reset() {
 }
 
 func (fep *FEP) Finish() error {
-	err := lock(fep.dir)
+	err := lock.Lock(fep.dir)
 	if err == nil {
 		err = fep.en.Finish()
-		Unlock(fep.dir)
+		lock.Unlock(fep.dir)
 	}
 
 	termi.SetEscapeListener(nil)
@@ -235,12 +193,12 @@ func (fep *FEP) Finish() error {
 }
 
 func (fep *FEP) sync() error {
-	err := lock(fep.dir)
+	err := lock.Lock(fep.dir)
 	if err != nil {
 		return err
 	}
 	err = fep.en.Sync()
-	Unlock(fep.dir)
+	lock.Unlock(fep.dir)
 	return err
 }
 
@@ -288,7 +246,7 @@ func (fep *FEP) draw() {
 func (fep *FEP) Main() {
 	buf := make([]byte, bufferSize)
 	for {
-		n, err := fep.f.Read(buf)
+		n, err := fep.f.f.Read(buf)
 		if err != nil {
 			return
 		}
