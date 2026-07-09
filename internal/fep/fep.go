@@ -115,13 +115,15 @@ func Init(dir string, en Engine, cmd string, args ...string) (*FEP, error) {
 
 	err = lock.Lock(dir)
 	if err != nil {
-		fep.reset()
+		reset()
+		p.Close()
 		return nil, err
 	}
 	err = en.Init(dir)
 	lock.Unlock(dir)
 	if err != nil {
-		fep.reset()
+		reset()
+		p.Close()
 		return nil, err
 	}
 
@@ -169,15 +171,13 @@ func Init(dir string, en Engine, cmd string, args ...string) (*FEP, error) {
 	return fep, nil
 }
 
-func (fep *FEP) reset() {
+func reset() {
 	termi.FinishKey()
 	fmt.Print(termi.ScrollReset)
 	fmt.Print(termi.Clear)
 	fmt.Print(termi.HomeCursor)
 	termi.Cooked()
 	fmt.Print(termi.ShowCursor)
-
-	fep.p.Close()
 }
 
 func (fep *FEP) Finish() error {
@@ -188,7 +188,7 @@ func (fep *FEP) Finish() error {
 	}
 
 	termi.SetEscapeListener(nil)
-	fep.reset()
+	reset()
 	return err
 }
 
