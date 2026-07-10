@@ -29,6 +29,13 @@ func (en *Engine) Process(key termi.Key) (string, fep.Cmd) {
 		return "", fep.CmdNone
 	}
 
+	// win32-input-mode
+	if key.Kind == termi.KeyEscapeDown {
+		return en.handleEscape(key.Raw)
+	} else if key.Kind == termi.KeyEscapeUp {
+		return key.Raw, fep.CmdDraw
+	}
+
 	// hide message
 	if en.message != "" {
 		en.message = ""
@@ -101,7 +108,7 @@ func (en *Engine) Process(key termi.Key) (string, fep.Cmd) {
 	case termi.RuneEnter:
 		return en.handleConvEnter()
 	case termi.RuneEscape:
-		return en.handleEscape(r)
+		return en.handleEscape(string(r))
 	case 'L':
 		return en.enterZenMode()
 	case '/':

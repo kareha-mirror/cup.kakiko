@@ -67,7 +67,7 @@ func (en *Engine) handleConvEnter() (string, fep.Cmd) {
 	return en.output(true)
 }
 
-func (en *Engine) handleEscape(r rune) (string, fep.Cmd) {
+func (en *Engine) handleEscape(seq string) (string, fep.Cmd) {
 	en.resetKanaInput()
 	en.inputMode = inputASCII
 
@@ -85,7 +85,7 @@ func (en *Engine) handleEscape(r rune) (string, fep.Cmd) {
 		en.lineMode = false
 	}
 
-	en.out.WriteRune(r)
+	en.out.WriteString(seq)
 	return en.output(true)
 }
 
