@@ -1,0 +1,74 @@
+version: "3"
+env:
+  CGO_ENABLED: 0
+tasks:
+  skk-edic-merge:
+    cmds:
+      - go build ./cmd/skk-edic-merge
+  skk-edic-joyo:
+    deps:
+      - skk-edic-merge
+    dir: skk-edic
+    cmds:
+      - ../skk-edic-merge joyo/*.txt > ../cmd/kakiko/skk-edic-joyo.txt
+  kihon:
+    deps:
+      - skk-edic-merge
+    dir: skk-edic
+    cmds:
+      - ../skk-edic-merge kihon/*.txt > skk-edic-kihon.txt
+  handcopy:
+    deps:
+      - skk-edic-merge
+    dir: skk-edic/handcopy
+    cmds:
+      - ../../skk-edic-merge station/config/skk-edic-diff.txt computer/config/skk-edic-diff.txt diary/config/skk-edic-diff.txt science/config/skk-edic-diff.txt world/config/skk-edic-diff.txt philosophy/config/skk-edic-diff.txt > skk-edic-handcopy.txt
+  skk-edic-overlay:
+    deps:
+      - skk-edic-merge
+      - kihon
+      - handcopy
+    dir: skk-edic
+    cmds:
+      - ../skk-edic-merge skk-edic-kihon.txt handcopy/skk-edic-handcopy.txt > ../cmd/kakiko/skk-edic-overlay.txt
+  default:
+    deps:
+      - skk-edic-joyo
+      - skk-edic-overlay
+    cmds:
+      - go build ./cmd/kakiko
+  clean:
+    cmds:
+      - rm -f kakiko
+      - rm -f kakiko.exe
+      - rm -f skk-edic-merge
+      - rm -f cmd/kakiko/skk-edic-joyo.txt
+      - rm -f cmd/kakiko/skk-edic-overlay.txt
+      - rm -f skk-edic/skk-edic-kihon.txt
+      - rm -f skk-edic/handcopy/skk-edic-handcopy.txt
+  test:
+    cmds:
+      - go test ./...
+  run:
+    cmds:
+      - go run ./cmd/kakiko
+  fmt:
+    cmds:
+      - go fmt ./...
+  tidy:
+    env:
+      GOPRIVATE: tea.kareha.org
+    cmds:
+      - go get tea.kareha.org/cup/termi@latest
+      - go mod tidy
+  windows:
+    env:
+      GOOS: windows
+      GOARCH: amd64
+    cmds:
+      - go build -o kakiko.exe ./cmd/kakiko
+  kk:
+    cmds:
+      - mkdir -p config
+      - ./kakiko -joyo -d config
+      - rm -rf config
