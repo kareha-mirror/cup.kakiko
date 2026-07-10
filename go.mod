@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/colinmarc/cdb v0.0.0-20190223170904-60f317823f70
 	gopkg.in/yaml.v3 v3.0.1
-	tea.kareha.org/cup/termi v0.0.0-20260710062132-7bf95444a975
+	tea.kareha.org/cup/termi v0.0.0-20260710155821-ec816e71d053
 )
 
 require (

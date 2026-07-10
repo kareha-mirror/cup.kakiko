@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"tea.kareha.org/cup/termi/lock"
+	"tea.kareha.org/cup/termi/shutil"
 
 	"tea.kareha.org/cup/kakiko/internal/fep"
 	"tea.kareha.org/cup/kakiko/internal/skk"
@@ -72,7 +73,7 @@ func main() {
 	var command string
 	var arguments []string
 	if len(args) < 1 {
-		command = guessCommand()
+		command = shutil.Path()
 	} else {
 		command = args[0]
 	}
