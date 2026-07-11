@@ -57,6 +57,12 @@ tasks:
   fmt:
     cmds:
       - go fmt ./...
+  vet:
+    cmds:
+      - go vet ./...
+  check:
+    cmds:
+      - staticcheck ./...
   tidy:
     env:
       GOPRIVATE: tea.kareha.org

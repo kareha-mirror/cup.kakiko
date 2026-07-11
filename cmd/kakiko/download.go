@@ -41,6 +41,9 @@ func downloadDictionary(dir string) error {
 
 	fmt.Printf("Downloading dictionary..\n")
 	body, err := getHTTP(u)
+	if err != nil {
+		return err
+	}
 
 	err = os.WriteFile(path, body, 0666)
 	if err != nil {
