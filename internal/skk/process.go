@@ -1,11 +1,28 @@
 package skk
 
 import (
+	"fmt"
+
 	"tea.kareha.org/cup/termi"
+
+	"golang.design/x/clipboard"
 
 	"tea.kareha.org/cup/kakiko/internal/fep"
 	"tea.kareha.org/cup/kakiko/internal/romaji"
 )
+
+var ClipboardInitialized = false
+
+func ensureClipboard() error {
+	if ClipboardInitialized {
+		return nil
+	}
+	if err := clipboard.Init(); err != nil {
+		return err
+	}
+	ClipboardInitialized = true
+	return nil
+}
 
 func (en *Engine) Process(key termi.Key) (string, fep.Cmd) {
 	// delete candidate
@@ -27,6 +44,20 @@ func (en *Engine) Process(key termi.Key) (string, fep.Cmd) {
 	if key.Kind == termi.KeyBeginPaste && en.regMode {
 		en.pasteMode = true
 		return "", fep.CmdNone
+	}
+
+	// system clipboard
+	if en.regMode && key.Kind == termi.KeyRune && key.Rune == 0x16 { // Ctrl-V
+		err := ensureClipboard()
+		if err != nil {
+			en.message = fmt.Sprintf("%s", err)
+			return "", fep.CmdDraw
+		}
+		text := string(clipboard.Read(clipboard.FmtText))
+		for _, r := range text {
+			en.handleRune(r)
+		}
+		return "", fep.CmdDraw
 	}
 
 	// win32-input-mode
