@@ -16,11 +16,13 @@ import (
 
 const appName = "kakiko"
 
-//go:embed skk-edic-joyo.txt
-var skkdicJoyo string
+var (
+	//go:embed skk-edic-joyo.txt
+	skkdicJoyo string
 
-//go:embed skk-edic-overlay.txt
-var skkdicOverlay string
+	//go:embed skk-edic-overlay.txt
+	skkdicOverlay string
+)
 
 func fatal(a ...any) {
 	fmt.Fprintln(os.Stderr, a...)

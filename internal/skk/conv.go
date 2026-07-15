@@ -1,8 +1,6 @@
 package skk
 
-import (
-	"tea.kareha.org/cup/termi/rbuf"
-)
+import "tea.kareha.org/cup/termi/rbuf"
 
 type convMode int
 
@@ -76,8 +74,10 @@ func (c *conv) cand() string {
 
 const candOffset = 4
 
-var candKeyList = []rune{'a', 's', 'd', 'f', 'j', 'k', 'l'}
-var candKeys = map[rune]int{}
+var (
+	candKeyList = []rune{'a', 's', 'd', 'f', 'j', 'k', 'l'}
+	candKeys    = map[rune]int{}
+)
 
 func init() {
 	for i, r := range candKeyList {

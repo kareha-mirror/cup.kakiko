@@ -1,8 +1,6 @@
 package skkdic
 
-import (
-	"github.com/colinmarc/cdb"
-)
+import "github.com/colinmarc/cdb"
 
 type CDBDic struct {
 	path string

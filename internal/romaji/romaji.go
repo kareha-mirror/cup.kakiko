@@ -1,8 +1,6 @@
 package romaji
 
-import (
-	"strings"
-)
+import "strings"
 
 var ToKigou = map[string]string{
 	"!": "！",

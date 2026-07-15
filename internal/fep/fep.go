@@ -17,7 +17,7 @@ const bufferSize = 1024
 type Cmd int
 
 const (
-	CmdNone = iota
+	CmdNone Cmd = iota
 	CmdDraw
 	CmdSync
 )

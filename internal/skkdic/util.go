@@ -1,8 +1,6 @@
 package skkdic
 
-import (
-	"strings"
-)
+import "strings"
 
 func parseSeq(seq string) []string {
 	cands := make([]string, 0)
