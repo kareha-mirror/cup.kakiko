@@ -138,6 +138,12 @@ func Init(dir string, en Engine, cmd string, args ...string) (*FEP, error) {
 	go func() {
 		for {
 			key := <-termi.Keys()
+			if key.Kind == termi.KeyResized {
+				err := fep.updateSize()
+				if err != nil {
+					return
+				}
+			}
 			processed, cmd := en.Process(key)
 			if processed != "" {
 				err = writeStringAll(p, processed)
