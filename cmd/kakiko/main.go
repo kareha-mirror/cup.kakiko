@@ -49,10 +49,11 @@ func main() {
 	}
 
 	if *unlock {
-		err := lock.Unlock(*configDir)
+		err := lock.ForceUnlock(*configDir)
 		if err != nil {
 			fatal(err)
 		}
+		fmt.Println("Lock has been removed.")
 		return
 	}
 
