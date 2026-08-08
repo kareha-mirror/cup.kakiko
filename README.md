@@ -7,8 +7,8 @@ kakiko is a frontend processor for text terminals which enables Japanese text in
 ## Build
 
 kakiko is written in Go.
-You need Go build tools.
-Run `make` and executable file `kakiko` will be built.
+You need Go build tools and [Task](https://taskfile.dev/).
+Run `task` and executable file `kakiko` will be built.
 
 ## Run
 
